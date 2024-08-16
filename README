@@ -1,0 +1,897 @@
+WA1Tools V1.0
+=============
+
+WA1Tools is a suite of command-line translation and hacking tools for the
+PlayStation 1 version of the game "Wild Arms" by Media Vision. It can be
+used for modding the game, searching for hidden content, and creating fan
+translations. The main focus of the tools is on the dumping and editing of
+in-game text.
+
+The included tools are:
+
+ * trans / untrans
+   Dump ('untrans') or reinsert ('trans') all translatable text and graphics
+   in the game to or from a set of text and image files.
+
+ * mapinfo
+   Dump the script code of all maps.
+
+The tools are entirely written in Python and have the following
+dependencies:
+
+ * Python 2.7
+
+ * Pillow >= 2.2.1 (https://pypi.python.org/pypi/Pillow/)
+
+Most of the tools use the included 'wa' package which must reside in the
+same directory as the tools themselves, or be included in the PYTHONPATH.
+
+
+Restrictions and general information
+------------------------------------
+
+The tools are designed for the PlayStation 1 version of the game. They will
+not work with the PlayStation 2 remake "Wild Arms Alter Code: F" nor with
+any other of the games in the Wild Arms series.
+
+Only the 'untrans' and 'mapinfo' tools can operate directly with a CD image
+of the game. The 'trans' tool only works on extracted files from the
+filesystem of the game CD. For extracting the filesystem tree of the game
+I recommend using the 'psxrip' tool from the PSXImager toolset (see
+https://github.com/cebix/psximager) which preserves the XA media files the
+game uses.
+
+The tools support the following releases of the game:
+
+ * Wild Arms, Japanese release (SCPS-10028)
+ * Wild Arms, US release (SCUS-94608)
+ * Wild Arms, English European release (SCES-00321)
+ * Wild Arms, German European release (SCES-01172)
+ * Wild Arms, Spanish European release (SCES-01174)
+
+The 'trans' tool does not work with the Japanese version of the game because
+Japanese text encoding is not implemented. Dumping Japanese text with the
+'untrans' tool works fine, though.
+
+
+trans / untrans
+---------------
+
+Usage: untrans [OPTION...] <game_dir_or_image> <trans_dir>
+  -a, --altchars                  Use alternate character set for text
+  -V, --version                   Display version information and exit
+  -?, --help                      Show this help message
+
+Usage: trans [OPTION...] <trans_dir> <game_dir>
+  -a, --altchars                  Use alternate character set for text
+  -V, --version                   Display version information and exit
+  -?, --help                      Show this help message
+
+With these two tools you can dump and reinsert all translatable text in the
+game, including the game's fonts and textures with embedded text.
+
+When doing a retranslation of the game it is recommended that you first use
+the 'untrans' tool to dump all text, change what you want to change, and
+then use the 'trans' tool to reinsert the text into the game files. The
+section "Workflow for translation" below will give you some hints for doing
+this efficiently.
+
+The 'untrans' tool extracts text from either a plain ISO or raw
+("MODE2/2352") CD image, or from a local directory (the "game directory")
+containing the game files, to a newly created "translation directory" which
+holds individual text and graphics files for each of the game's maps, menus,
+etc.
+
+The 'trans' tool performs the reverse operation of inserting the text and
+graphics from the files of the specified translation directory into the game
+files. It only writes to extracted game files, not to CD images.
+
+The tools only read and change the following game files, and the 'trans'
+tool creates backups (with the ending ".orig") of all files it changes:
+
+  SYSTEM.CNF
+  BIN/CDSTG.BIN
+  EXE/WILDARMS.EXE
+  SYS/SY0.BIN
+  SYS/SY1.BIN
+  SYS/UT0.BIN
+  SYS/UT0.OVR
+
+To put the files changed by 'trans' back into the actual game you either
+have to replace these files directly in the CD image (for example with the
+'psxinject' tool from PSXImager), or remaster the entire CD image (for
+example with 'psxbuild' from PSXImager).
+
+
+The translation directory consists of the following subdirectories and
+files:
+
+  exe/
+    item.txt
+    item_help.txt
+    arm.txt
+    arm_help.txt
+    tool.txt
+    tool_help.txt
+    fast_draw.txt
+    fast_draw_help.txt
+    magic.txt
+    magic2.txt
+    magic_help.txt
+    force.txt
+    force_help.txt
+      Names of items, ARMs, tools, Fast Draw techniques/hints, spells and
+      force abilities, together with their respective help texts.
+
+      "magic.txt" contains the 64 standard spells which can be renamed by
+      the player. They are limited to 10 characters each. The names of other
+      spells, some of which can be cast with the 'Randomizer', are in
+      the file "magic2.txt".
+
+    technique.txt
+      Names of the special abilities unique to each character.
+
+    character.txt
+      Default names of the playable characters. They are limited to 8
+      characters each.
+
+    job.txt
+      Character descriptions in the status screen.
+
+    luck.txt
+      Luck levels as displayed in the status screen.
+
+    guardian.txt
+      Names of the Guardians.
+
+    map_name.txt
+      Names of maps, indexed by map number (0..127).
+
+    menu_help.txt
+      Help texts for the main menu commands (which only have icons, not
+      names).
+
+    auto_cmd.txt
+    auto_cmd_help.txt
+      Texts for the 'Auto Battle' menu
+
+    config.txt
+    config_help.txt
+    config_setting.txt
+    controller.txt
+      Texts for the 'Config' menu.
+
+    menu.txt
+    menu2.txt
+      Additional texts for the game's menus.
+
+      There are more menu texts which are embedded in textures
+      ("gfx/menu_labels.png", see below).
+
+    load_save.txt
+    load_save2.txt
+    memory_card.txt
+      Texts for the load/save and memory card management screens. The
+      "load_save2.txt" file is only used with European releases of the game.
+
+      There are more texts which are embedded in textures
+      ("gfx/load_save.png" and "gfx/memory_card.png", see below).
+
+    name_entry.txt
+      Mapping of cursor positions to characters in 'name entry' screens.
+
+      This file only determines which character to insert when the player
+      makes a selection. The actual layout of the entry screen is stored as
+      a texture ("gfx/name_entry.png", see below). If you want to customize
+      the name entry screen you need to change both files in a consistent
+      way.
+
+    icon.txt
+      Texts for the icon editor.
+
+    window.txt
+      Texts for the window frame editor.
+
+    command_help.txt
+      Help texts for battle commands.
+
+    enemy.txt
+      Names of enemies.
+
+    attack.txt
+      Names of enemy attacks and abilities.
+
+    battle.txt
+    miss.txt
+    ok.txt
+      Additional texts used in battles.
+
+    best_runners.txt
+    trial_result.txt
+      Texts for the Time Trial leaderboard in the Adlehyde fair.
+
+    script.txt
+      Text related to using the Gella Coin item. This file has the same
+      format as the map dialog text files (see below).
+
+  map/
+    One file for each map of the game (except for map 25 which doesn't
+    exist), containing all dialog text of that map. Each string is prefixed
+    with a header line starting with the character '▶' (Unicode U+25B6), for
+    example:
+
+      ▶ 1 (dialog)
+      *You Can't Summon
+       The Earth Golem Here!
+      ▶ 2 (string)
+      YES
+      ▶ 3 (string)
+      NO
+      ▶ 4 (dialog)
+      {CHAR 1}:
+      「Fine, I'll take care of my   
+       own problems.
+
+      ... etc. ...
+
+    The 'untrans' tool puts a running index number into the header line, and
+    an indication about the use of the string ('dialog' = the string appears
+    in a message window, 'string' = the string is a choice response or is
+    used as a text for some menu screen).
+
+    The 'trans' tool looks for the '▶' header lines to determine the start
+    of each string, so you should not remove or add these lines. The text
+    following the '▶' character on the same line is ignored, however, so you
+    can use these headers to record comments about your translation.
+
+    Note that due to possible differences in the map scripting, corresponding
+    strings in different regional versions of the game are not guaranteed
+    to have identical index numbers.
+
+    Maps which have no corresponding text file in the translation directory
+    are skipped by the 'trans' tool and left unchanged.
+
+    Four maps (5, 36, 51, and 57) have extra text files which contain
+    additional strings used in the map-specific code:
+
+    005_extra.txt
+      The names of the five runners initially on the Time Trial leaderboard.
+      They are limited to 7 characters each, except for the last name which
+      is limited to 11 characters.
+
+    036_extra.txt
+      The password ("Emiko") for the Memory Temple. It is limited to 7
+      characters.
+
+    051_extra.txt
+      The password ("Metal Bird") for the Epitaph of the Sea Wind. It is
+      limited to 11 characters.
+
+    057_extra.txt
+      The password ("Demon Gate") for the Demon's Lab. It is limited to 11
+      characters.
+
+  gfx/
+    This directory contains graphics that are relevant to translation:
+    1) the game's fonts, 2) textures with embedded text.
+
+    The graphics are stored as PNG images. You can edit them using a
+    graphics program (or a specialized sprite/tile editor if you have one)
+    and reinsert them into the game with the 'trans' tool. You must,
+    however, preserve the original size of each image.
+
+    The tools only handle 8-bit indexed (paletted) PNG images and you cannot
+    make any changes to the color palette. The 'untrans' tool gives each
+    image a default palette which is why some icons in the images show up
+    with the wrong colors (the game actually uses different palettes for
+    each part of a texture). The 'trans' tool ignores the palette from the
+    image file completely, and only looks at the pixel values in the image
+    data (0..15, since the game uses 4-bit textures). It also never changes
+    the color palettes defined in the game files.
+
+    The directory contains the following files, which vary between game
+    versions:
+
+    dialog_font.png
+      The main font of the game which is used for dialogs and help texts in
+      menus.
+
+      For the US release of the game, the font contains 96 characters (ASCII
+      range 20..7f), each character occupying 8x16 pixels. The lower five
+      pixel rows are not drawn by the game so the maximum character height
+      is actually only 11 pixels.
+
+      In European releases, the font contains 224 characters (code range
+      20..ff) but the character dimensions are the same.
+
+      The Japanese release of the game uses an entirely different character
+      set with 12x11 pixels per character.
+
+    dialog_font2.png
+    dialog_font3.png
+    dialog_font4.png
+      These files are only used with the US release of the game and contain
+      alternate versions of the "dialog" font which are, to our knowledge,
+      unused by the game. If you want to give the game a different look you
+      can copy one of these files over "dialog_font.png".
+
+    kanji.png
+      This file is only used with the Japanese release of the game and
+      contains the kanji for the texts in the "exe" directory. The game
+      actually has additional kanji sets embedded within each map which are
+      not dumped by 'untrans'.
+
+      This font is provided for reference purposes only since the 'untrans'
+      tool can automatically decode kanji into their UTF-8 equivalents.
+
+    menu_font.png
+      This is the second font of the game which is mainly used in menus, for
+      example in the inventory list. The texture has 8x16 pixels per
+      character (8x12 pixels used) in all versions of the game. European
+      releases have a different character set, however.
+
+      The magenta background (pixel value 0) is transparent in the game.
+
+    menu_labels.png
+      This texture contains the labels for the game's menus ("HP", "LV",
+      "EXP", "Gella" etc.), texts for battles ("LEVEL UP!"), and some icons.
+
+    load_save.png
+    memory_card.png
+      These two files contain buttons and texts for the load/save and memory
+      card screens, and for the icon and window frame editors.
+
+    name_entry.png
+      This image contains the layout of the 'name entry' screen. In
+      non-Japanese versions of the game only the lower third of the image is
+      used.
+
+      The image only determines what is visible on the screen. The actual
+      characters which are entered into a name when the user makes a
+      selection are stored as a text file ("exe/name_entry.txt", see above).
+      If you want to customize the name entry screen you need to change both
+      files in a consistent way.
+
+
+Warning and error messages of 'trans'
+
+  Common warning and error messages of the 'trans' tool which you may
+  encounter include:
+
+  "File '<file>' expected to contain <x> lines but found <y>"
+    Many files in the translation directory (everything in the "exe"
+    directory, as well as the "extra" text files in the "map" directory)
+    must contain a certain, fixed number of lines, even if some of them are
+    empty. You probably accidentally deleted or inserted a line.
+
+  "String '<str>' from file '<file>' is too long when encoded (<x> > <y>
+   bytes)"
+  "Text in file '<file>' is too long when encoded (<x> > <y> bytes)"
+    Since the 'trans' tool replaces some of the game's texts in-place, they
+    are limited in the maximum number of characters they can contain. You
+    should shorten these texts.
+
+  "Not enough room for strings"
+    There is not enough room for inserting all of the text from the files in
+    the "exe" directory. You should shorten some of these texts.
+
+  "Unknown escape sequence '\<char>' in string '<str>'"
+    The '\' backslash is used to escape the characters '{', '}', and '\'
+    itself. Other escape sequences are not recognized.
+
+  "Mismatched {} in string '<str>'"
+  "Unknown command '<command>' in string '<str>'"
+  "Syntax error in command '<command>' in string '<str>'"
+    Either you misspelled one of the {<command>} control codes, or you
+    wanted to use a '{' or '}' character in the text but forgot to escape
+    it as '\{' or '\}', respectively.
+
+  "Argument of <command> command out of range in string '<str>'"
+    The numerical argument of a {<command> nn} control code is not within
+    the range of supported numbers. Depending on the command, this range is
+    0..9, 0..99, or 0..999.
+
+  "Unencodable character '<char>' in string '<str>'"
+    Your text uses a character which is not present in the character set of
+    the particular game version. See the section "Character set" further
+    below for a list of supported characters.
+
+    Note: Due to an oversight by the developers, the US release of the game
+    contains invalid characters in the following files which are a remnant
+    of the Japanese character set:
+
+      map/003.txt, string 144
+      map/037.txt, strings 135 and 136
+      map/119.txt, strings 135 and 136
+
+    You should remove the invalid characters before running 'trans'.
+
+  "Image '<file>' expected to be of size (<w>, <h>) but found (<w>, <h>)"
+    The size (width, height) of an image file in the "gfx" subdirectory of
+    the translation directory has been changed from the original image. The
+    'trans' tool can only insert images which have the exact same size.
+
+
+Text which is not extracted
+
+  Some of the text in the game is not extractable or changable with the
+  'trans' and 'untrans' tools:
+
+   * The title screen and the "Push Start Button" text.
+
+   * The ending credits which are hardcoded into the ending movie.
+
+
+Control codes
+-------------
+
+The strings in the translation files may contain some special characters,
+and control codes denoted by {} braces. For this reason, if you want to have
+literal '{' or '}' characters in your texts you need to escape them as '\{'
+and '\}'.
+
+Some control codes have a numerical parameter which is specified in decimal
+notation.
+
+Note: Names of items, spells, enemies, etc. do not support these codes, but
+their help texts do.
+
+  <newline> character
+    Starts a new line of text. The game does not have automatic word
+    wrapping, so all line breaks must be inserted manually.
+
+    Map dialog text is usually displayed in message windows holding a
+    maximum of three rows with 32 characters each.
+
+  {STR n}
+    Insert the string specified by the game variable var[n] (n = 0..9).
+
+  {NUM n}
+  {UNUM n}
+  {HEX n}
+    Insert the value of the game variable var[n] (n = 0..9). {UNUM} displays
+    the value as an unsigned quantity, and {HEX} uses hexadecimal notation
+    (neither of these two codes is actually used in the game and they are
+    probably leftovers from development).
+
+  {CHAR n}
+    Insert the name of a character (which may have been changed by the
+    player):
+      0: Rudy
+      1: Jack
+      2: Cecilia
+      3: Hanpan
+      9: current party leader
+
+  {COLOR n}
+    Set the color of the following text:
+      0: black
+      1: white (default)
+      2: red
+      3: orange
+      4: cyan
+      5: green
+      6: gray
+
+The following control codes are only supported in dialog messages (the text
+files in the "map" directory):
+
+  {ITEM n}
+  {SPELL n}
+  {TOOL n}
+    Insert the name of the item, spell, or tool referenced by the game
+    variable var[n] (n = 0..9).
+
+  {ITEMICON n}
+  {SPELLICON n}
+  {TOOLICON n}
+    Show the icon of the item, spell, or tool referenced by the game
+    variable var[n] (n = 0..9) in the top left corner of the message window,
+    shifting the text to the right to accomodate. This is usually used for
+    'XYZ acquired!' messages.
+
+  {PAUSE}
+    Show the green continuation arrow at the bottom of the message window
+    and wait for the player to press the OK button before continuing.
+
+  {SCROLL}
+    Scroll the contents of the message window up one line. This is used in
+    the game to present the dialog in segments of three lines which are
+    visible at once, and is usually followed by a {PAUSE} code or the end of
+    the string.
+
+  {CLEAR}
+    Clear the contents of the message window and move the cursor to the top
+    left corner of the window. The 'untrans' tool automatically adds a
+    newline to the translation file after this code to make the formatting
+    of the following text easier to see. Similarly, the 'trans' tool ignores
+    a newline immediately following a {CLEAR} code.
+
+  {SOUND nnn}
+    Play a sound effect (nnn = 0..999).
+
+  {WAIT nn}
+    Wait nn frames before continuing (nn = 0..99). One frame equals 1/60 of
+    a second in NTSC releases of the game, and 1/50 of a second in PAL
+    releases.
+
+  {SPEED nn}
+    Set the text output speed (the number of frames the game waits between
+    printing each character). Higher numbers make the text appear slower.
+
+  {LARGE}
+  {SMALL}
+    These two codes are only supported in the Japanese release of the game
+    and switch the text size between a large font (16 pixels) and the small,
+    default font (12 pixels).
+
+  {XSHADOW}
+  {YSHADOW}
+    Toggle the text shadow in the X or Y direction, respectively. The
+    default is for the shadow to appear in both directions, i.e. one pixel
+    below and to the right of the text.
+
+    To completely toggle the shadow on or off you need to use both codes
+    together: {XSHADOW}{YSHADOW}
+
+  {ASK 0}
+    Let the player choose between two responses, for example to answer a
+    yes/no question. The two choices are specified by the game variables
+    var[10] and var[11], and are always strings contained in the same map
+    translation file. To see which choices correspond to which questions
+    you need to consult the script code dumped by the 'mapinfo' tool.
+
+    If used, this code must appear at the end of a message.
+
+  {CONTINUE}
+    Automatically continue script execution after the message has been
+    displayed completely. Normally, at the end of a message the game shows a
+    spinning green symbol in the bottom right corner of the message window
+    and waits for the player to press the OK button. The {CONTINUE} code
+    disables this behavior.
+
+    If used, this code must appear at the end of a message.
+
+  {ASYNC}
+    Continue script execution while the message is being displayed. This is
+    used for playing cutscene animations over accompanying text, for example
+    in the character intros.
+
+    If used, this code must appear at the end of a message.
+
+    In general, you should not add or remove {CONTINUE} and {ASYNC} codes in
+    the dialog texts because doing so may interfere with the timing of
+    cutscenes.
+
+
+Character set
+-------------
+
+The text files in the translation directory produced or used by the
+'untrans' and 'trans' tools use the UTF-8 character encoding. The game's
+fonts include only a subset of all Unicode characters, of course.
+
+All Western releases of the game support the following standard ASCII
+characters:
+
+  0123456789
+  abcdefghijklmnopqrstuvwxyz
+  ABCDEFGHIJKLMNOPQRSTUVWXYZ
+  !"#%&'()*+,-./:<=>?[]_`{}
+
+as well as these additional characters which take the place of some of the
+ASCII code points:
+
+              in-game
+   Unicode   character
+  character  code (hex)  notes
+  ------------------------------------------------------------------------
+     「         40       opening dialog quote (replaces the ASCII '@' character)
+     『         7e       left quote mark (replaces the ASCII '~' character)
+      』        5e       right quote mark (replaces the ASCII '^' character)
+      ★         3b       star (replaces the ASCII ';' character)
+      ♂         5c       male sign (replaces the ASCII '\' character)
+      ♀         7c       female sign (replaces the ASCII '|' character)
+
+The angled quote marks are taken from Japanese typography. Note that there
+is no 」 closing dialog quote in the font. The characters ★, ♂, and ♀ are
+only used in name entry screens.
+
+European releases of the game use an extended font which provides additional
+characters:
+
+              in-game
+   Unicode   character
+  character  code (hex)  notes
+  ------------------------------------------------------------------------
+      Á         b5 +     A with acute
+      Ä         8e       A with diaeresis (A umlaut)
+      Å         8f       A with ring
+      Æ         92       AE ligature
+      Ç         80       C with cedilla
+      É         90       E with acute
+      Í         d6 +     I with acute
+      Ñ         a5       N with tilde
+      Ö         99       O with diaeresis (O umlaut)
+      Ú         e9 +     U with acute
+      Ü         9a       U with diaeresis (U umlaut)
+      ü         81       u with diaeresis (u umlaut)
+      à         85       a with grave
+      á         a0       a with acute
+      â         83       a with circumflex
+      ä         84       a with diaeresis (a umlaut)
+      å         86       a with ring
+      æ         91       ae ligature
+      ç         87       c with cedilla
+      è         8a       e with grave
+      é         82       e with acute
+      ê         88       e with circumflex
+      ë         89       e with diaeresis
+      ì         8d       i with grave
+      í         a1       i with acute
+      î         8c       i with circumflex
+      ï         8b       i with diaeresis
+      ñ         a4       n with tilde
+      ò         95       o with grave
+      ó         a2       o with acute
+      ô         93       o with circumflex
+      ö         94       o with diaeresis (o umlaut)
+      ß         e1       German sharp s
+      ù         97       u with grave
+      ú         a3       u with acute
+      û         96       u with circumflex
+      ÿ         98       y with diaeresis
+      ¢         9b *     cent sign
+      £         9c *     pound sign
+      ¥         9d *     yen sign
+      ƒ         9f *     florin sign
+      ª         a6       feminine ordinal indicator
+      º         a7       masculine ordinal indicator
+      ¿         a8       inverted question mark
+      ¬         aa *     not sign
+      ½         ab *     1/2 fraction
+      ¼         ac *     1/4 fraction
+      ¡         ad       inverted exclamation mark
+      «         ae       left guillemet
+      »         af       right guillemet
+      ¶         e3 *     pilcrow
+      µ         e6 *     micro sign
+      ±         f1 *     plus-minus sign
+      ÷         f6 *     division sign
+      °         f8 *     degree sign
+      ∙         f9 *     bullet
+
+The characters marked '*' are present in the game's font but not actually
+used anywhere in the game's texts, while the characters marked '+' ARE used
+in the Spanish release of the game despite not being present in the font,
+showing up as white squares instead (nice QA job, Sony...).
+
+The tables above specify all characters which the 'untrans' tool will
+produce (for Western game releases, at least) and which the 'trans' tool
+will recognize.
+
+When invoked with the '-a' (--altchars) option, the 'trans' and 'untrans'
+tools switch to an alternate Western character set which exchanges the quote
+marks with their more common forms:
+
+              in-game
+   Unicode   character
+  character  code (hex)  notes
+  ------------------------------------------------------------------------
+      “         40       left double quotes (replacing 「)
+      ”         60       right double quotes (replacing `)
+      ‘         7e       left single quote (replacing 『)
+      ’         5e       right single quote (replacing 』)
+
+and which, for European releases of the game, adds the following additional
+code points which are missing in the game's font:
+
+              in-game
+   Unicode   character
+  character  code (hex)  notes
+  ------------------------------------------------------------------------
+      À         b7       A with grave
+      Â         b6       A with circumflex
+      Ã         c7       A with tilde
+      Ð         d1       Eth
+      È         d4       E with grave
+      Ê         d2       E with circumflex
+      Ë         d3       E with diaeresis
+      Ì         de       I with grave
+      Î         d7       I with circumflex
+      Ï         d8       I with diaeresis
+      Ò         e3       O with grave (replacing ¶)
+      Ó         e0       O with acute
+      Ô         e2       O with circumflex
+      Õ         e5       O with tilde
+      Œ         ef       OE ligature
+      Ø         9d       O with stroke (replacing ¥)
+      Ù         eb       U with grave
+      Û         ea       U with circumflex
+      ã         c6       a with tilde
+      ð         d0       eth
+      õ         e4       o with tilde
+      ø         9b       o with stroke (replacing ¢)
+      œ         ee       oe ligature
+      ý         ec       y with acute
+      Ý         ed       Y with acute
+      þ         e7       thorn
+      Þ         e8       Thorn
+      ~         aa       tilde (replacing ¬)
+      …         f2       ellipsis
+
+Note that giving the '-a' option to 'trans' will not actually alter the
+game's font in any way. It just changes the set of characters that the tool
+will recognize in translation files. To make the characters show up
+correctly you need to add them to the font textures yourself, by editing
+the files "gfx/dialog_font.png" and "gfx/menu_font.png" (see above).
+
+These additional characters are intended to support future fan translations
+of the game to other European languages. Except for the four quote
+characters they are not supported in the US release of the game which is
+restricted to the 20..7f character range.
+
+For advanced users: If you want to translate the game into a language that
+is not covered by the game's character sets, such as Russian, you need to
+supply your own font image files and change the variable 'altCharset' in
+'wa/text.py' accordingly to define the correct mapping between characters in
+the text files and code points within your font.
+
+
+Workflow for translation
+------------------------
+
+This section describes a possible workflow for creating a fan translation or
+a mod of Wild Arms using the WA1Tools and PSXImager.
+
+Here, we assume that we are translating from Japanese and are using the US
+release of the game as a basis for our new version. This doesn't necessarily
+mean that the target language has to be English. For most languages it might
+actually be better to base the translated version on a PAL release, because
+of their support for non-ASCII characters.
+
+ 1. Produce a raw ("MODE2/2352") image from the US game CD, for example
+    using 'cdrdao':
+
+      cdrdao read-cd --read-raw --datafile WildArms-US.bin WildArms-US.toc
+      toc2cue WildArms-US.toc WildArms-US.cue
+
+ 2. Dump the game files with 'psxrip' from PSXImager, creating the game
+    directory "WildArms-US":
+
+      psxrip WildArms-US
+
+ 3. Extract all game text to the translation directory "text-us":
+
+      untrans WildArms-US text-us
+
+    The created files will be the template for inserting the new, translated
+    texts.
+
+ 4. Repeat steps 1 and 3 for the Japanese game CD, creating a second
+    translation directory "text-jp":
+
+      cdrdao read-cd --read-raw --datafile WildArms-JP.bin WildArms-JP.toc
+      toc2cue WildArms-JP.toc WildArms-JP.cue
+      untrans WildArms-JP.bin text-jp
+
+    The created files will be the source for the translation.
+
+    Note that in order to save disk space we did not extract the game files
+    with 'psxrip' but ran 'untrans' directly on the CD image.
+
+ 5. Translate/modify the files in the "text-us" directory. The 'trans' tool
+    will work slightly faster if you make a copy of that directory and
+    delete all files from the "map" subdirectory which you are not going to
+    change, or which you haven't translated yet (since you are unlikely to
+    complete the entire game script in one go).
+
+ 6. Reinsert the changed text and images into the US game files:
+
+      trans text-us WildArms-US
+
+ 7. Rebuild the CD image:
+
+      psxbuild WildArms-US
+
+ 8. Load the resulting image into an emulator and test your changes.
+
+ 9. Repeat steps 5 through 8 if necessary.
+
+Note 1: CD images produced in this way will not be bootable on original
+PlayStation hardware because the PlayStation checks a signature on the CD
+which is not reproducible using 'psxbuild' and off-the-shelf CD burners.
+
+Note 2: You are not allowed to redistribute modified copies of the game
+without having obtained permission from the copyright holders (Media Vision
+in this case).
+
+
+mapinfo
+-------
+
+Usage: mapinfo [OPTION...] <game_dir_or_image> <output_dir>
+  -V, --version                   Display version information and exit
+  -?, --help                      Show this help message
+
+The 'mapinfo' tool dumps a rough disassembly of the script code embedded in
+each of the game's maps. It creates the given output directory and writes
+one text file per map.
+
+Not all of the script commands are completely decoded but the dump should
+give you a general idea of how a particular map's scripts are organized, the
+context in which certain messages are used, and how to trigger them.
+
+Examining the script requires you to have some familiarity with programming
+and with the use of scripting languages in gaming. The following
+explanations are not supposed to be a complete specification of the game's
+scripting language (which we don't have, either) but only to give you some
+general hints on how to interpret it:
+
+- The language supports simple jumps ('jump'), subroutine calls ('call',
+  'ret'), conditional branches ('if'), and nested loops ('while', 'break').
+
+- Script instructions are referenced (for example in jump targets) by 16-bit
+  hexadecimal addresses.
+
+- 'window' opens a message window, 'message' displays the specified text in
+  the active window, and 'close' closes it.
+
+- 'mapfunc' and 'exec' execute native MIPS code in the map file which
+  implements map-specific functions.
+
+- Game variables ('var[x]') and event flags ('flag[x]') are stored as a part
+  of the game save state. Each game variable can hold a 32-bit signed
+  integer value or a script address.
+
+- Variables 'var[0]' through 'var[9]' are mainly used in conjunction with
+  message control codes (e.g. '{ITEM n}').
+
+- The two choices of an {ASK} question in a message are stored as pointers
+  to 'string' commands in variables 'var[10]' and 'var[11]', loaded with
+  commands of the form 'let var[10] = (addr xxxx)'. The player's choice can
+  be queried via the special 'result' variable.
+
+- The 'result' variable is also set by certain 'menu' instructions, by code
+  called with 'exec', as well as by some other commands. For example,
+  'result' indicates whether adding an item to the inventory was successful.
+
+- 'rand' returns a random value between 0 and 32767.
+
+- The flags 'flag[-1]' and 'flag[-2]' as well as the variable 'var[12]' are
+  specific to the object or NPC the player currently interacts with. For
+  example, 'var[12]' could be the amount of gold obtained from a treasure
+  chest. This allows the game to reuse the same script code for different
+  treasures.
+
+- 'party[0]' through 'party[2]' correspond to the three party slots, each
+  holding the index number of the character who occupies the respective slot
+  (0 = Rudy, 1 = Jack, 2 = Cecilia, -1 = nobody).
+  'let party[-1] = x' adds a character to the party.
+  'let party[-2] = x' removes a character.
+
+- 'let inventory[-1] = x' adds one copy of item number x to the party's
+  inventory, while 'let inventory[-2] = x' removes an item. Inside
+  expressions, 'inventory[x]' checks whether the item x is in the inventory.
+
+- 'arm[]', 'fast_draw[]', 'spell[]', and 'tool[]' work in the same fashion.
+
+- 'status[]' yields the status effects inflicted on a character.
+
+The WA1Tools suite does not currently include a tool which would let you
+change the game script.
+
+
+Acknowledgements
+----------------
+
+Creating WA1Tools would not have been possible without:
+
+ * The aid of Marco Kretschmer in deciphering the kanji character sets.
+
+
+Author
+------
+
+Christian Bauer
+www.cebix.net

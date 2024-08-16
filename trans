@@ -1,0 +1,679 @@
+#!/usr/bin/python2
+
+#
+# Trans - Insert all translatable text of Wild Arms from text files
+#
+# Copyright (C) Christian Bauer <www.cebix.net>
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+
+__version__ = "1.0"
+
+import sys
+import os
+import struct
+import StringIO
+import shutil
+import codecs
+import locale
+
+sys.stdout = codecs.getwriter(locale.getpreferredencoding())(sys.stdout, "backslashreplace")
+sys.stderr = codecs.getwriter(locale.getpreferredencoding())(sys.stderr, "backslashreplace")
+
+from PIL import Image
+
+import wa
+from wa.map import Op
+
+
+# Check whether a translation text file exists.
+def haveTrans(transPath, subDir, fileName):
+    filePath = os.path.join(transPath, subDir, fileName)
+    return os.path.isfile(filePath)
+
+
+# Retrieve the contents of a UTF-8 translation text file as a list of unicode
+# strings.
+def retrieveTrans(transPath, subDir, fileName):
+    filePath = os.path.join(transPath, subDir, fileName)
+
+    f = open(filePath, "rU")
+    lines = f.readlines()
+    f.close()
+
+    return [l.decode("utf-8-sig").rstrip("\n\r") for l in lines]
+
+
+# Retrieve the strings of a UTF-8 map translation file as a list of unicode
+# strings. In a map translation file, strings may consist of multiple lines,
+# with a line starting with U+25B6 (black right-pointing triangle) before
+# each string.
+def retrieveMapTrans(transPath, subDir, fileName):
+    filePath = os.path.join(transPath, subDir, fileName)
+
+    f = open(filePath, "rU")
+    lines = f.readlines()
+    f.close()
+
+    strings = []
+    if not lines:
+        return strings
+
+    lines = [l.decode("utf-8-sig") for l in lines]
+    if lines[0].startswith(u'\u25b6'):
+        lines = lines[1:]
+    else:
+        raise EnvironmentError, u"First line of file '%s' is expected to start with '\u25b6'" % filePath
+
+    currentString = ""
+    for line in lines:
+        if line.startswith(u'\u25b6'):
+
+            # A line starting with U+25B6 ends the current string
+            if currentString.endswith(u'\n'):
+                currentString = currentString[:-1]  # strip final newline
+
+            strings.append(currentString)
+            currentString = ""
+            continue
+
+        else:
+            # Append line to current string
+            currentString += line
+
+    # Add the last string
+    if currentString.endswith(u'\n'):
+        currentString = currentString[:-1]  # strip final newline
+
+    strings.append(currentString)
+    return strings
+
+
+# Retrieve a game file for updating, first creating a backup.
+def openForUpdate(image, subDir, fileName):
+    filePath = os.path.join(image.basePath, subDir, fileName)
+    backupPath = filePath + ".orig"
+
+    # Create a backup file
+    if not os.path.exists(backupPath):
+        shutil.copyfile(filePath, backupPath)
+        print "'%s' backed up to '%s'" % (filePath, backupPath)
+
+    # Open the file for updating
+    return open(filePath, "r+b")
+
+
+# Translate text in the main game executable.
+def translateExec(transPath, image):
+    print "Translating executable..."
+
+    # Retrieve the file
+    file = openForUpdate(image, "EXE", "WILDARMS.EXE")
+    data = bytearray(file.read())
+
+    # Conversion between file offsets and memory addresses
+    baseAddr = 0x80011420 - 0x800
+
+    #
+    # Translate the string tables with pointer blocks
+    #
+
+    # Pass 1: Retrieve all strings, encode them, and build a list of free data blocks
+    offsetList = wa.data.execFileData(image.version)
+
+    encodedStrings = []
+    dataBlocks = []  # list of [data, startOffset, size]
+
+    for tableOffset, numStrings, dataOffset, dataSize, specialBytes, specialHack, transDir, transFileName in offsetList:
+
+        # Load the translation file
+        lines = retrieveTrans(transPath, transDir, transFileName)
+        if len(lines) != numStrings:
+            raise EnvironmentError, "File '%s' expected to contain %d lines but found %d" % (transFileName, numStrings, len(lines))
+
+        pointers = list(struct.unpack_from("<%dL" % numStrings, data, tableOffset))
+
+        specialCount = 2
+
+        # Encode the strings
+        for line in lines:
+            e = wa.text.encode(line, image.version)
+
+            # Copy the data bytes from the original string
+            if specialHack and specialCount > 0:
+                copyBytes = specialBytes + 2
+                specialCount -= 1
+            else:
+                copyBytes = specialBytes
+
+            if copyBytes:
+                p = pointers[0]
+                e = str(data[p - baseAddr:p - baseAddr + copyBytes]) + e
+
+            encodedStrings.append(e)
+            pointers.pop(0)
+
+        # Append data block
+        if dataOffset is None:
+            dataOffset = tableOffset + numStrings * 4  # string data follows after pointer table
+
+        dataBlocks.append(["", dataOffset, dataSize])
+
+    # Pass 2: Fill the data blocks with the encoded string data
+    offsetOfString = {}  # mapping of string data to file offset
+
+    for s in encodedStrings:
+        if s in offsetOfString:
+            continue
+
+        stringLen = len(s)
+        offset = None
+
+        # Find a free data block
+        for block in dataBlocks:
+            blockData = block[0]
+            blockOffset = block[1]
+            blockSize = block[2]
+
+            if len(blockData) + stringLen <= blockSize:
+
+                # Found one, append the string
+                offset = blockOffset + len(blockData)
+                block[0] += s
+                break
+
+        if offset is None:
+            raise ValueError, "Not enough room for strings"
+
+        offsetOfString[s] = offset
+
+    # Pass 3: Write the pointer blocks
+    for tableOffset, numStrings, dataOffset, dataSize, specialBytes, specialHack, transDir, transFileName in offsetList:
+
+        for i in xrange(numStrings):
+            s = encodedStrings.pop(0)
+            offset = offsetOfString[s]
+
+            struct.pack_into("<L", data, tableOffset + i * 4, offset + baseAddr)
+
+    assert(len(encodedStrings) == 0)
+
+    # Pass 4: Write the data blocks
+    for block in dataBlocks:
+        blockData = block[0]
+        blockOffset = block[1]
+        blockSize = block[2]
+        usedSize = len(blockData)
+
+        print "  string block: %d of %d bytes used" % (usedSize, blockSize)
+
+        if usedSize < blockSize:
+            blockData += '\0' * (blockSize - usedSize)  # pad with null bytes
+
+        data[blockOffset:blockOffset + blockSize] = blockData
+
+    #
+    # Translate the simple string tables
+    #
+
+    offsetList = wa.data.execFileData2(image.version)
+
+    for offset, numStrings, maxStringLen, encoding, transDir, transFileName in offsetList:
+
+        # Load the translation file
+        lines = retrieveTrans(transPath, transDir, transFileName)
+        if len(lines) != numStrings:
+            raise EnvironmentError, "File '%s' expected to contain %d lines but found %d" % (transFileName, numStrings, len(lines))
+
+        # Insert the strings
+        for line in lines:
+            if encoding is not None:
+                e = line.encode(encoding) + '\0'
+            else:
+                e = wa.text.encode(line, image.version)
+
+            stringLen = len(e)
+
+            if stringLen > maxStringLen:
+                raise EnvironmentError, "String '%s' from file '%s' is too long when encoded (%d > %d bytes)" % (line, transFileName, stringLen, maxStringLen)
+            elif stringLen < maxStringLen:
+                e += '\0' * (maxStringLen - stringLen)  # pad with null bytes
+
+            data[offset:offset + maxStringLen] = e
+            offset += maxStringLen
+
+    #
+    # Insert the fonts
+    #
+
+    fontList = wa.data.fontData(image.version)
+
+    for offset, numChars, charWidth, charHeight, lineSpacing, outCharsPerRow, transDir, transFileName in fontList:
+        fontHeight = charHeight + lineSpacing
+
+        # Read image file
+        imageWidth = outCharsPerRow * charWidth
+        imageHeight = (numChars + outCharsPerRow - 1) / outCharsPerRow * fontHeight
+
+        filePath = os.path.join(transPath, transDir, transFileName)
+        img = Image.open(filePath)
+
+        if img.size != (imageWidth, imageHeight):
+            raise EnvironmentError, "Image '%s' expected to be of size (%d, %d) but found (%d, %d)" % (transFileName, imageWidth, imageHeight, img.size[0], img.size[1])
+
+        img = img.convert("L")
+
+        # Convert image to font bitmap
+        for c in xrange(numChars):
+            xBase = (c % outCharsPerRow) * charWidth
+            yBase = (c / outCharsPerRow) * fontHeight
+
+            for y in xrange(charHeight):
+                d = 0
+
+                for x in xrange(charWidth):
+                    byte = x / 8
+                    bit = 7 - (x % 8)
+
+                    if img.getpixel((xBase + x, yBase + y)) >= 0x80:
+                        d |= 1 << bit
+
+                    if bit == 0:
+                        # Write data byte
+                        data[offset] = d
+                        offset += 1
+                        d = 0
+
+                if charWidth % 8:
+                    # Write remaining data
+                    data[offset] = d
+                    offset += 1
+
+    #
+    # Insert texts in embedded scripts
+    #
+
+    # Load the translation file
+    transFileName = "script.txt"
+    strings = retrieveMapTrans(transPath, "exe", transFileName)
+
+    # Extract the scripts
+    tableOffset, numScripts, dataOffset, maxDataSize = wa.data.execScriptData(image.version)
+
+    exeScripts = []
+
+    pointers = struct.unpack_from("<%dL" % numScripts, data, tableOffset)
+    for p in pointers:
+        offset = p - baseAddr
+
+        script = []
+        while True:
+            instr = wa.map.parseInstruction(data, offset, image.version, baseAddr)
+            script.append(instr)
+
+            if instr.op == Op.RETURN:
+                break
+
+            offset += instr.length
+
+        exeScripts.append(script)
+
+    # Check that all strings are translated
+    numTexts = sum(1 for instr in sum(exeScripts, []) if instr.op in [Op.MESSAGE, Op.STRING])
+    if len(strings) != numTexts:
+        raise EnvironmentError, "File '%s' expected to contain %d texts but found %d" % (transFileName, numTexts, len(strings))
+
+    # Insert all strings into the scripts
+    index = 1
+    for script in exeScripts:
+        for instr in script:
+            if instr.op not in [Op.MESSAGE, Op.STRING]:
+                continue
+
+            string = strings.pop(0)
+            string = string.replace("{CLEAR}\n", "{CLEAR}")
+            string = string.replace("\n", "{CR}")
+
+            instr.setText(wa.text.encode(string, image.version))
+
+    assert(len(strings) == 0)
+
+    # Reinsert the scripts into the executable
+    pointers = []
+    scriptData = ""
+
+    offset = dataOffset
+
+    for script in exeScripts:
+        p = offset + baseAddr
+        pointers.append(p)
+
+        script, addrMap = wa.map.recalcScriptAddr(script, p & 0xffff)
+        script = wa.map.fixupScript(script, addrMap)
+
+        d = wa.map.getScriptData(script)
+        scriptData += d
+
+        offset += len(d)
+
+    dataSize = len(scriptData)
+    if dataSize > maxDataSize:
+        raise EnvironmentError, "Text in file '%s' is too long when encoded (%d > %d bytes)" % (transFileName, dataSize, maxDataSize)
+    elif dataSize < maxDataSize:
+        scriptData += '\0' * (maxDataSize - dataSize)  # pad with null bytes
+
+    struct.pack_into("<%dL" % numScripts, data, tableOffset, *pointers)
+
+    data[dataOffset:dataOffset + maxDataSize] = scriptData
+
+    #
+    # Patch the executable to support taller characters
+    #
+
+    if image.version == wa.Version.DE:
+        patchLoc = (0x405e8, 0x418b4, 0x42abc, 0x42e34)
+    else:
+        patchLoc = None
+
+    if patchLoc is not None:
+        print "Patching executable..."
+
+        loc1, loc2, loc3, loc4 = patchLoc
+
+        struct.pack_into("<L", data, loc1, 0x00000000)  # nop        (use 16x16 font texture area)
+        struct.pack_into("<L", data, loc2, 0x2403000c)  # li $v1,12  (use ASCII check for printable characters)
+        struct.pack_into("<L", data, loc3, 0x2411000f)  # li $s1,15  (maximum character bitmap height)
+        struct.pack_into("<L", data, loc4, 0x2403000c)  # li $v1,12  (use dialog font bitmaps)
+
+    # Save the file
+    file.seek(0)
+    file.truncate()
+    file.write(data)
+    file.close()
+
+
+# Translate text in the UT0.OVR overlay.
+def translateUtil(transPath, image):
+    print "Translating overlay..."
+
+    # Retrieve the file
+    file = openForUpdate(image, "SYS", "UT0.OVR")
+
+    # Conversion between file offsets and memory addresses
+    baseAddr = 0x801b0000
+
+    # Process all string tables
+    offsetList = wa.data.utilFileData(image.version)
+
+    for tableOffset, numStrings, dataOffset, dataSize, maxStringLen, transDir, transFileName in offsetList:
+
+        # Load the translation file
+        lines = retrieveTrans(transPath, transDir, transFileName)
+        if len(lines) != numStrings:
+            raise EnvironmentError, "File '%s' expected to contain %d lines but found %d" % (transFileName, numStrings, len(lines))
+
+        # Insert all strings
+        pointers = []
+        data = ""
+
+        for line in lines:
+
+            # Append the pointer
+            pointers.append(dataOffset + baseAddr + len(data))
+
+            # Encode the string
+            e = wa.text.encode(line, image.version)
+
+            stringLen = len(e)
+            if stringLen > maxStringLen:
+                raise EnvironmentError, "String '%s' from file '%s' is too long when encoded (%d > %d bytes)" % (line, transFileName, stringLen, maxStringLen)
+
+            data += e
+
+        # Write the string data
+        l = len(data)
+        if l > dataSize:
+            raise ValueError, "Not enough room for strings"
+        elif l < dataSize:
+            data += '\0' * (dataSize - l)  # pad with null bytes
+
+        file.seek(dataOffset)
+        file.write(data)
+
+        # Write the pointer table
+        file.seek(tableOffset)
+        file.write(struct.pack("<%dL" % numStrings, *pointers))
+
+    file.close()
+
+
+# Translate text in maps.
+def translateMaps(transPath, image):
+    print "Translating maps..."
+
+    # Retrieve the map file
+    mapFile = openForUpdate(image, "BIN", "CDSTG.BIN")
+
+    # Process all maps
+    for mapNumber in xrange(128):
+
+        # Read the map data block
+        block = mapFile.read(0x91000)
+
+        # Map 25 is dummied out
+        if mapNumber == 25:
+            continue
+
+        transFileName = "%03d.txt" % mapNumber
+        extraFileName = "%03d_extra.txt" % mapNumber
+
+        # Skip maps which have no translation
+        if not haveTrans(transPath, "map", transFileName):
+            print "  skipping map", mapNumber
+            continue
+
+        print "  map", mapNumber
+
+        # Get information about extra strings
+        mapStringData = wa.data.mapStringData(image.version).get(mapNumber, [])
+
+        # Load the translation file(s)
+        strings = retrieveMapTrans(transPath, "map", transFileName)
+
+        if mapStringData:
+            codeStrings = retrieveTrans(transPath, "map", extraFileName)
+        else:
+            codeStrings = []
+
+        # Extract the scripts
+        mapData = wa.map.MapData(block, mapNumber, image.version)
+
+        script1 = mapData.getScript1()
+        script2 = mapData.getScript2()
+
+        # Check that all strings are translated
+        numTexts = sum(1 for instr in (script1 + script2) if instr.op in [Op.MESSAGE, Op.STRING])
+        if len(strings) != numTexts:
+            raise EnvironmentError, "File '%s' expected to contain %d texts but found %d" % (transFileName, numTexts, len(strings))
+
+        numCodeStrings = len(mapStringData)
+        if len(codeStrings) != numCodeStrings:
+            raise EnvironmentError, "File '%s' expected to contain %d lines but found %d" % (extraFileName, numCodeStrings, len(codeStrings))
+
+        # Insert all strings into the scripts
+        for instr in script1 + script2:
+            if instr.op not in [Op.MESSAGE, Op.STRING]:
+                continue
+
+            string = strings.pop(0)
+            string = string.replace("{CLEAR}\n", "{CLEAR}")
+            string = string.replace("\n", "{CR}")
+
+            instr.setText(wa.text.encode(string, image.version))
+
+        assert(len(strings) == 0)
+
+        # Encode and check the extra strings
+        for i in xrange(numCodeStrings):
+            line = codeStrings[i]
+            e = wa.text.encode(line, image.version)
+
+            stringLen = len(e)
+            maxStringLen = mapStringData[i][1]
+
+            if stringLen > maxStringLen:
+                raise EnvironmentError, "String '%s' from file '%s' is too long when encoded (%d > %d bytes)" % (line, extraFileName, stringLen, maxStringLen)
+
+            codeStrings[i] = e
+
+        # Reinsert the scripts and extra strings into the map data
+        mapData.setScripts(script1, script2, codeStrings)
+
+        # Write the map data block back
+        mapFile.seek(-0x91000, 1)
+        mapFile.write(mapData.data)
+
+    mapFile.close()
+
+
+# Insert textures into menu graphics archives.
+def translateTextures(transPath, image):
+    print "Inserting textures..."
+
+    transDir = "gfx"
+
+    for subDir, fileName, archiveSize, lastSectionSize, textureList in wa.data.textureData:
+
+        # Retrieve the archive
+        file = openForUpdate(image, subDir, fileName)
+        data = file.read()
+        archive = wa.archive.Archive(StringIO.StringIO(data[:archiveSize]))
+
+        # Preserve any extra data following the archive
+        if archiveSize is None:
+            extraData = ""
+        else:
+            extraData = data[archiveSize:]
+
+        # Adjust the size of the last section which the Archive class has
+        # merely guessed from the file size
+        lastSection = archive.getSection(-1)
+
+        if lastSectionSize == -1:  # section is compressed
+            lastSectionSize = wa.lzss.compressedSize(lastSection)
+
+        archive.setSection(-1, lastSection[:lastSectionSize])
+
+        # Insert all textures
+        for pixelSection, clutSection, dimensions, clutOffset, transFileName in textureList:
+
+            # Load the image file
+            filePath = os.path.join(transPath, transDir, transFileName)
+            img = Image.open(filePath)
+
+            imageWidth, imageHeight = dimensions
+
+            if img.size != dimensions:
+                raise EnvironmentError, "Image '%s' expected to be of size (%d, %d) but found (%d, %d)" % (transFileName, imageWidth, imageHeight, img.size[0], img.size[1])
+
+            if img.mode != "P":
+                raise EnvironmentError, "Image '%s' is not in indexed color mode" % transFileName
+
+            # Convert image to 4-bit pixel data
+            input = img.tobytes()
+            pixelData = ""
+            for i in xrange(0, len(input), 2):
+                p1 = ord(input[i]) & 0x0f
+                p2 = ord(input[i + 1]) & 0x0f
+                pixelData += chr((p2 << 4) | p1)
+
+            # Compress data and add to archive
+            archive.setSection(pixelSection, wa.lzss.compress(pixelData))
+
+        # Save the archive
+        archive.writeToFile(file)
+
+        if archiveSize is not None:
+            actualSize = file.tell()
+
+            if actualSize > archiveSize:
+                raise EnvironmentError, "Image data for '%s' too large after compression" % fileName
+            elif actualSize < archiveSize:
+                file.write('\0' * (archiveSize - actualSize))  # pad with null bytes
+
+        # Restore the extra data following the archive
+        file.write(extraData)
+        file.close()
+
+
+# Print usage information and exit.
+def usage(exitcode, error = None):
+    print "Usage: %s [OPTION...] <trans_dir> <game_dir>" % os.path.basename(sys.argv[0])
+    print "  -a, --altchars                  Use alternate character set for text"
+    print "  -V, --version                   Display version information and exit"
+    print "  -?, --help                      Show this help message"
+
+    if error is not None:
+        print >>sys.stderr, "\nError:", error
+
+    sys.exit(exitcode)
+
+
+# Parse command line arguments
+transPath = None
+gamePath = None
+altCharset = False
+
+for arg in sys.argv[1:]:
+    if arg == "--version" or arg == "-V":
+        print "Trans", __version__
+        sys.exit(0)
+    elif arg == "--help" or arg == "-?":
+        usage(0)
+    elif arg == "--altchars" or arg == "-a":
+        altCharset = True
+    elif arg[0] == "-":
+        usage(64, "Invalid option '%s'" % arg)
+    else:
+        if transPath is None:
+            transPath = arg
+        elif gamePath is None:
+            gamePath = arg
+        else:
+            usage(64, "Unexpected extra argument '%s'" % arg)
+
+if transPath is None:
+    usage(64, "No translation input directory specified")
+if gamePath is None:
+    usage(64, "No game data directory specified")
+
+if altCharset:
+    wa.text.setAltCharset()
+
+try:
+
+    if not os.path.isdir(gamePath):
+        raise EnvironmentError, "'%s' is not a directory" % gamePath
+
+    # Check that this is a Wild Arms game directory
+    image = wa.openImage(gamePath)
+
+    # Insert everything
+    translateExec(transPath, image)
+    translateUtil(transPath, image)
+    translateMaps(transPath, image)
+    translateTextures(transPath, image)
+
+    print "Done."
+
+except Exception, e:
+
+    # Pokemon exception handler
+    if e.message:
+        print >>sys.stderr, e.message
+        sys.exit(1)
+    else:
+        raise
