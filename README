@@ -7,6 +7,11 @@ used for modding the game, searching for hidden content, and creating fan
 translations. The main focus of the tools is on the dumping and editing of
 in-game text.
 
+NOTE: These tools have been developed for a fan translation project that
+never got beyoond the concept stage and has been abandoned many years ago.
+As such, the tools were never extensively tested in a production setting,
+and for the time being I do not maintain or support them in any way.
+
 The included tools are:
 
  * trans / untrans
@@ -20,6 +25,7 @@ The tools are entirely written in Python and have the following
 dependencies:
 
  * Python 2.7
+   The tools are not compatible with Python 3.
 
  * Pillow >= 2.2.1 (https://pypi.python.org/pypi/Pillow/)
 
