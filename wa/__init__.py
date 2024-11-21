@@ -15,15 +15,15 @@ __version__ = "1.0"
 import os
 import re
 import struct
-import StringIO
+import io
 
-import cd
-import data
-import text
-import map
-import archive
-import lzss
-from version import Version
+from . import cd
+from . import data
+from . import text
+from . import map
+from . import archive
+from . import lzss
+from .version import Version
 
 
 # Object representing a CD image of the game.
@@ -34,7 +34,7 @@ class GameImage(cd.Image):
     # Retrieve a file from the image, returning an open file object.
     def openFile(self, subDir, fileName):
         data = self.readFile(subDir + '/' + fileName)
-        f = StringIO.StringIO(data)
+        f = io.BytesIO(data)
         return f
 
     # Check for the existence of a file in the image.
@@ -70,16 +70,16 @@ def checkVersion(image):
     f = image.openFile("", "SYSTEM.CNF")
     line = f.readline()
 
-    m = re.match(r"BOOT *= *cdrom:\\EXE\\([\w.]+)(;1)?", line)
+    m = re.match(br"BOOT *= *cdrom:\\EXE\\([\w.]+)(;1)?", line)
     if not m:
-        raise EnvironmentError, "Unrecognized line '%s' in SYSTEM.CNF (not a Wild Arms image?)" % line
+        raise EnvironmentError("Unrecognized line '%s' in SYSTEM.CNF (not a Wild Arms image?)" % line)
 
-    execFileName = m.group(1)
+    execFileName = m.group(1).decode("ascii")
 
     if execFileName == "SCPS_100.28":
         f = image.openFile("EXE", "WILDARMS.EXE")
         data = f.read(32)
-        if data[16] == '\x10':
+        if data[16] == 0x10:
             version = Version.JP2
         else:
             version = Version.JP1
@@ -96,7 +96,7 @@ def checkVersion(image):
     elif execFileName == "SCES_011.74":
         version = Version.ES
     else:
-        raise EnvironmentError, "Unrecognized game version"
+        raise EnvironmentError("Unrecognized game version")
 
     return (version, execFileName)
 
@@ -109,7 +109,7 @@ def openImage(path):
     elif os.path.isdir(path):
         image = GameDirectory(path)
     else:
-        raise EnvironmentError, "'%s' is not a directory or disc image file" % path
+        raise EnvironmentError("'%s' is not a directory or disc image file" % path)
 
     image.version, image.execFileName = checkVersion(image)
     return image

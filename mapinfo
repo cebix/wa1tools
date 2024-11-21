@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python3
 
 #
 # MapInfo - Extract scripts of Wild Arms maps
@@ -16,11 +16,9 @@ import sys
 import os
 import struct
 import shutil
-import codecs
-import locale
 
-sys.stdout = codecs.getwriter(locale.getpreferredencoding())(sys.stdout, "backslashreplace")
-sys.stderr = codecs.getwriter(locale.getpreferredencoding())(sys.stderr, "backslashreplace")
+sys.stdout.reconfigure(encoding = "locale", errors = "backslashreplace")
+sys.stderr.reconfigure(encoding = "locale", errors = "backslashreplace")
 
 import wa
 from wa.map import Op
@@ -28,12 +26,12 @@ from wa.map import Op
 
 # Print usage information and exit.
 def usage(exitcode, error = None):
-    print "Usage: %s [OPTION...] <game_dir_or_image> <output_dir>" % os.path.basename(sys.argv[0])
-    print "  -V, --version                   Display version information and exit"
-    print "  -?, --help                      Show this help message"
+    print("Usage: %s [OPTION...] <game_dir_or_image> <output_dir>" % os.path.basename(sys.argv[0]))
+    print("  -V, --version                   Display version information and exit")
+    print("  -?, --help                      Show this help message")
 
     if error is not None:
-        print >>sys.stderr, "\nError:", error
+        print("\nError:", error, file=sys.stderr)
 
     sys.exit(exitcode)
 
@@ -44,7 +42,7 @@ outputDir = None
 
 for arg in sys.argv[1:]:
     if arg == "--version" or arg == "-V":
-        print "MapInfo", __version__
+        print("MapInfo", __version__)
         sys.exit(0)
     elif arg == "--help" or arg == "-?":
         usage(0)
@@ -70,13 +68,13 @@ try:
 
     # Create the output directory
     if os.path.isfile(outputDir):
-        print >>sys.stderr, "Cannot create output directory '%s': Path refers to a file" % outputDir
+        print("Cannot create output directory '%s': Path refers to a file" % outputDir, file=sys.stderr)
         sys.exit(1)
 
     if os.path.isdir(outputDir):
         answer = None
         while answer not in ["y", "n"]:
-            answer = raw_input("Output directory '%s' exists. Delete and overwrite it (y/n)? " % outputDir)
+            answer = input("Output directory '%s' exists. Delete and overwrite it (y/n)? " % outputDir)
 
         if answer == 'y':
             shutil.rmtree(outputDir)
@@ -85,8 +83,8 @@ try:
 
     try:
         os.makedirs(outputDir)
-    except OSError, e:
-        print >>sys.stderr, "Cannot create output directory '%s': %s" % (outputDir, e.strerror)
+    except OSError as e:
+        print("Cannot create output directory '%s': %s" % (outputDir, e.strerror), file=sys.stderr)
         sys.exit(1)
 
     # Retrieve the map file and game executable
@@ -98,7 +96,7 @@ try:
     nameTableOffset = wa.data.mapNameTableOffset(image.version)
 
     # Process all maps
-    for mapNumber in xrange(128):
+    for mapNumber in range(128):
 
         # Read the map data block
         block = mapFile.read(0x91000)
@@ -107,25 +105,25 @@ try:
         if mapNumber == 25:
             continue
 
-        print "  map", mapNumber
+        print("  map", mapNumber)
 
         # Create the output file
         filePath = os.path.join(outputDir, "map_%03d.txt" % mapNumber)
         try:
-            f = open(filePath, "w")
-        except IOError, e:
-            print >>sys.stderr, "Cannot create file '%s': %s" % (filePath, e.strerror)
+            f = open(filePath, "w", encoding = "utf-8")
+        except IOError as e:
+            print("Cannot create file '%s': %s" % (filePath, e.strerror), file=sys.stderr)
             sys.exit(1)
 
         # Find the map name
         p = struct.unpack_from("<L", exeData, nameTableOffset + mapNumber * 4)[0]
         o = p - 0x80011420 + 0x800
-        mapName = wa.text.decode(exeData[o:exeData.index('\0', o)], image.version)
+        mapName = wa.text.decode(exeData[o:exeData.index(b'\0', o)], image.version)
 
-        print >>f, "##"
-        print >>f, "## Map number %d (%s)" % (mapNumber, mapName.encode("utf-8"))
-        print >>f, "##"
-        print >>f
+        print("##", file=f)
+        print("## Map number %d (%s)" % (mapNumber, mapName), file=f)
+        print("##", file=f)
+        print(file=f)
 
         # Extract the scripts
         mapData = wa.map.MapData(block, mapNumber, image.version)
@@ -139,39 +137,36 @@ try:
         script2 = mapData.getScript2()
 
         for scriptName, script in [("Script 1", script1), ("Script 2", script2)]:
-            print >>f, "#"
-            print >>f, "#", scriptName
-            print >>f, "#"
-            print >>f
+            print("#", file=f)
+            print("#", scriptName, file=f)
+            print("#", file=f)
+            print(file=f)
 
             prevLineEmpty = False
 
             for instr in script:
                 haveEntry = False
 
-                for n in xrange(len(entries)):
+                for n in range(len(entries)):
                     for idx in [i for i, addr in enumerate(entries[n]) if addr == instr.addr]:
                         if not haveEntry and not prevLineEmpty:
-                            print >>f
+                            print(file=f)
 
-                        print >>f, "Entry %d.%d:" % (n, idx)
+                        print("Entry %d.%d:" % (n, idx), file=f)
                         haveEntry = True
                         prevLineEmpty = False
 
                 if haveEntry:
-                    print >>f
+                    print(file=f)
 
-                print >>f, "%04x:" % instr.addr, instr.disass.encode("utf-8")
+                print("%04x:" % instr.addr, instr.disass, file=f)
 
                 if instr.op in [Op.RETURN, Op.PTR]:
-                    print >>f
+                    print(file=f)
                     prevLineEmpty = True
 
-except Exception, e:
+except Exception as e:
 
     # Pokemon exception handler
-    if e.message:
-        print >>sys.stderr, e.message
-        sys.exit(1)
-    else:
-        raise
+    print(e, file=sys.stderr)
+    sys.exit(1)

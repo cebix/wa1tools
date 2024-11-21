@@ -48,7 +48,7 @@ def decompress(data):
         i += 1
 
         # Process 8 literals or references
-        for bit in xrange(8):
+        for bit in range(8):
             if k >= outputSize:
                 break
 
@@ -110,7 +110,7 @@ def compressedSize(data):
         i += 1
 
         # Process 8 literals or references
-        for bit in xrange(8):
+        for bit in range(8):
             if k >= maxSize:
                 break
 
@@ -137,16 +137,18 @@ class Dictionary:
 
         # For each reference length there is one dictionary mapping substrings
         # to dictionary offsets.
-        self.d = [{} for i in xrange(0, MAX_REF_LEN + 1)]
+        self.d = [{} for i in range(0, MAX_REF_LEN + 1)]
         self.ptr = 0
 
         # For each reference length there is also a reverse dictionary
         # mapping dictionary offsets to substrings. This makes removing
         # dictionary entries more efficient.
-        self.r = [{} for i in xrange(0, MAX_REF_LEN + 1)]
+        self.r = [{} for i in range(0, MAX_REF_LEN + 1)]
 
     # Add all initial substrings of a string to the dictionary.
     def add(self, s):
+        s = bytes(s)
+
         maxLength = MAX_REF_LEN
         if maxLength > len(s):
             maxLength = len(s)
@@ -154,7 +156,7 @@ class Dictionary:
         offset = self.ptr
 
         # Generate all substrings
-        for length in xrange(MIN_REF_LEN, maxLength + 1):
+        for length in range(MIN_REF_LEN, maxLength + 1):
             substr = s[:length]
 
             # Remove obsolete mapping, if present
@@ -181,11 +183,13 @@ class Dictionary:
     # looking for long matches first. Returns an (offset, length) tuple if
     # found. Raises KeyError if not found.
     def find(self, s):
+        s = bytes(s)
+
         maxLength = MAX_REF_LEN
         if maxLength > len(s):
             maxLength = len(s)
 
-        for length in xrange(maxLength, MIN_REF_LEN - 1, -1):
+        for length in range(maxLength, MIN_REF_LEN - 1, -1):
             substr = s[:length]
 
             try:
@@ -204,22 +208,22 @@ def compress(data):
 
     # Prime the dictionary
     dictionary.ptr = WSIZE - 2*MAX_REF_LEN
-    for i in xrange(MAX_REF_LEN):
-        dictionary.add('\0' * (MAX_REF_LEN - i) + data[:i])
+    for i in range(MAX_REF_LEN):
+        dictionary.add(b'\0' * (MAX_REF_LEN - i) + data[:i])
 
     # Output data starts with uncompressed data length
     dataSize = len(data)
-    output = struct.pack("<L", dataSize)
+    output = bytearray(struct.pack("<L", dataSize))
 
     i = 0
     while i < dataSize:
 
         # Accumulated output chunk
-        accum = ""
+        accum = bytearray()
 
         # Process 8 literals or references at a time
         flags = 0
-        for bit in xrange(8):
+        for bit in range(8):
             if i >= dataSize:
                 break
 
@@ -229,10 +233,11 @@ def compress(data):
                 offset, length = dictionary.find(substr)
 
                 # Yes, append dictionary reference
-                accum += chr(offset & 0xff) + chr(((offset >> 4) & 0xf0) | (length - MIN_REF_LEN))
+                accum.append(offset & 0xff)
+                accum.append(((offset >> 4) & 0xf0) | (length - MIN_REF_LEN))
 
                 # Update dictionary
-                for j in xrange(length):
+                for j in range(length):
                     dictionary.add(data[i + j:i + j + MAX_REF_LEN])
 
                 i += length
@@ -241,7 +246,7 @@ def compress(data):
 
                 # Append literal value
                 v = data[i]
-                accum += v
+                accum.append(v)
 
                 flags |= (1 << bit)
 
@@ -251,7 +256,7 @@ def compress(data):
                 i += 1
 
         # Chunk complete, add to output
-        output += chr(flags)
-        output += accum
+        output.append(flags)
+        output.extend(accum)
 
     return output

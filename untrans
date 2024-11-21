@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python3
 
 #
 # UnTrans - Extract all translatable text and graphics of Wild Arms to text and image files
@@ -15,13 +15,11 @@ __version__ = "1.0"
 import sys
 import os
 import struct
-import StringIO
+import io
 import shutil
-import codecs
-import locale
 
-sys.stdout = codecs.getwriter(locale.getpreferredencoding())(sys.stdout, "backslashreplace")
-sys.stderr = codecs.getwriter(locale.getpreferredencoding())(sys.stderr, "backslashreplace")
+sys.stdout.reconfigure(encoding = "locale", errors = "backslashreplace")
+sys.stderr.reconfigure(encoding = "locale", errors = "backslashreplace")
 
 from PIL import Image
 from PIL import ImagePalette
@@ -40,10 +38,10 @@ def saveTrans(transPath, subDir, fileName, lines):
 
     # Create the file
     filePath = os.path.join(transPath, subDir, fileName)
-    f = open(filePath, "w")
+    f = open(filePath, "w", encoding = "utf-8")
 
     # Write the lines, converted to UTF-8
-    f.writelines([l.encode("utf-8") + '\n' for l in lines])
+    f.writelines([l + '\n' for l in lines])
     f.close()
 
 
@@ -59,7 +57,7 @@ def appendScriptString(l, header, instr, version, kanjiBitmap = None):
 
 # Extract strings and font from the main game executable.
 def extractExec(image, transPath):
-    print "Dumping executable..."
+    print("Dumping executable...")
 
     # Retrieve the file
     discFile = image.openFile("EXE", "WILDARMS.EXE")
@@ -96,7 +94,7 @@ def extractExec(image, transPath):
 
             # Extract string data until the first null byte
             o = p - baseAddr + skipBytes
-            s = str(data[o:data.index('\0', o)])
+            s = data[o:data.index(b'\0', o)]
 
             string = wa.text.decode(s, image.version)
             lines.append(string)
@@ -115,12 +113,12 @@ def extractExec(image, transPath):
         # Extract the strings
         lines = []
 
-        for i in xrange(numStrings):
+        for i in range(numStrings):
             base = offset + i*stringSize
-            s = str(data[base:base + stringSize])
+            s = data[base:base + stringSize]
 
             if encoding is not None:
-                string = s.rstrip('\0').decode(encoding)
+                string = s.rstrip(b'\0').decode(encoding)
             else:
                 string = wa.text.decode(s, image.version)
 
@@ -140,17 +138,17 @@ def extractExec(image, transPath):
 
         # Create image from font bitmap, arranging the characters in table fashion
         imageWidth = outCharsPerRow * charWidth
-        imageHeight = (numChars + outCharsPerRow - 1) / outCharsPerRow * fontHeight
+        imageHeight = (numChars + outCharsPerRow - 1) // outCharsPerRow * fontHeight
 
         img = Image.new("1", (imageWidth, imageHeight))
 
-        for c in xrange(numChars):
+        for c in range(numChars):
             xBase = (c % outCharsPerRow) * charWidth
-            yBase = (c / outCharsPerRow) * fontHeight
+            yBase = (c // outCharsPerRow) * fontHeight
 
-            for y in xrange(charHeight):
-                for x in xrange(charWidth):
-                    byte = x / 8
+            for y in range(charHeight):
+                for x in range(charWidth):
+                    byte = x // 8
                     bit = 7 - (x % 8)
 
                     if bit == 7:
@@ -186,7 +184,7 @@ def extractExec(image, transPath):
             instr = wa.map.parseInstruction(data, offset, image.version, baseAddr)
 
             if instr.op == Op.MESSAGE:
-                header = u"\u25b6 %d (dialog)" % index
+                header = "\u25b6 %d (dialog)" % index
                 appendScriptString(lines, header, instr, image.version)
                 index += 1
             elif instr.op == Op.RETURN:
@@ -200,7 +198,7 @@ def extractExec(image, transPath):
 
 # Extract strings from the UT0.OVR overlay.
 def extractUtil(image, transPath):
-    print "Dumping overlay..."
+    print("Dumping overlay...")
 
     # Retrieve the file
     discFile = image.openFile("SYS", "UT0.OVR")
@@ -224,7 +222,7 @@ def extractUtil(image, transPath):
 
             # Extract string data until the first null byte
             o = p - baseAddr
-            s = data[o:data.index('\0', o)]
+            s = data[o:data.index(b'\0', o)]
 
             string = wa.text.decode(s, image.version)
             lines.append(string)
@@ -235,13 +233,13 @@ def extractUtil(image, transPath):
 
 # Extract strings from maps.
 def extractMaps(image, transPath):
-    print "Dumping maps..."
+    print("Dumping maps...")
 
     # Retrieve the map file
     mapFile = image.openFile("BIN", "CDSTG.BIN")
 
     # Process all maps
-    for mapNumber in xrange(128):
+    for mapNumber in range(128):
 
         # Read the map data block
         block = mapFile.read(0x91000)
@@ -265,9 +263,9 @@ def extractMaps(image, transPath):
                 continue
 
             if instr.op == Op.MESSAGE:
-                header = u"\u25b6 %d (dialog)" % index
+                header = "\u25b6 %d (dialog)" % index
             else:
-                header = u"\u25b6 %d (string)" % index
+                header = "\u25b6 %d (string)" % index
 
             appendScriptString(lines, header, instr, image.version, mapData.kanjiBitmap)
             index += 1
@@ -287,9 +285,9 @@ def extractMaps(image, transPath):
 
 # Convert 16-bit little-endian ABGR pixels to RGB (PIL's "BGR;15" format).
 def convertABGR(data):
-    output = ""
+    output = bytearray()
 
-    for i in xrange(0, len(data), 2):
+    for i in range(0, len(data), 2):
         pixel = struct.unpack_from("<H", data, i)[0]
 
         if pixel == 0:
@@ -304,14 +302,14 @@ def convertABGR(data):
 
         pixel = (r << 10) | (g << 5) | b
 
-        output += struct.pack("<H", pixel)
+        output.extend(struct.pack("<H", pixel))
 
-    return output
+    return bytes(output)
 
 
 # Extract textures from menu graphics archives.
 def extractTextures(image, transPath):
-    print "Dumping textures..."
+    print("Dumping textures...")
 
     transDir = "gfx"
 
@@ -319,7 +317,7 @@ def extractTextures(image, transPath):
 
         # Retrieve the archive
         data = image.openFile(subDir, fileName).read()
-        file = StringIO.StringIO(data[:archiveSize])
+        file = io.BytesIO(data[:archiveSize])
         archive = wa.archive.Archive(file)
 
         # Extract all textures
@@ -336,7 +334,7 @@ def extractTextures(image, transPath):
                 output.append(x >> 4)
 
             # Convert to image
-            img = Image.frombytes("P", dimensions, str(output), "raw", "P", 0, 1)
+            img = Image.frombytes("P", dimensions, output, "raw", "P", 0, 1)
             img.palette = ImagePalette.raw("BGR;15", convertABGR(clutData))
 
             # Write output image in PNG format
@@ -349,13 +347,13 @@ def extractTextures(image, transPath):
 
 # Print usage information and exit.
 def usage(exitcode, error = None):
-    print "Usage: %s [OPTION...] <game_dir_or_image> <trans_dir>" % os.path.basename(sys.argv[0])
-    print "  -a, --altchars                  Use alternate character set for text"
-    print "  -V, --version                   Display version information and exit"
-    print "  -?, --help                      Show this help message"
+    print("Usage: %s [OPTION...] <game_dir_or_image> <trans_dir>" % os.path.basename(sys.argv[0]))
+    print("  -a, --altchars                  Use alternate character set for text")
+    print("  -V, --version                   Display version information and exit")
+    print("  -?, --help                      Show this help message")
 
     if error is not None:
-        print >>sys.stderr, "\nError:", error
+        print("\nError:", error, file=sys.stderr)
 
     sys.exit(exitcode)
 
@@ -367,7 +365,7 @@ altCharset = False
 
 for arg in sys.argv[1:]:
     if arg == "--version" or arg == "-V":
-        print "UnTrans", __version__
+        print("UnTrans", __version__)
         sys.exit(0)
     elif arg == "--help" or arg == "-?":
         usage(0)
@@ -398,24 +396,24 @@ try:
 
     # Create the output directory
     if os.path.isfile(transPath):
-        raise EnvironmentError, "Cannot create translation directory '%s': Path refers to a file" % transPath
+        raise EnvironmentError("Cannot create translation directory '%s': Path refers to a file" % transPath)
 
     if os.path.isdir(transPath):
         answer = None
         while answer not in ["y", "n"]:
-            answer = raw_input("Output directory '%s' exists. Delete and overwrite it (y/n)? " % transPath)
+            answer = input("Output directory '%s' exists. Delete and overwrite it (y/n)? " % transPath)
 
         if answer == 'y':
             shutil.rmtree(transPath)
         else:
             sys.exit(0)
 
-    print "Creating translation directory '%s'..." % transPath
+    print("Creating translation directory '%s'..." % transPath)
 
     try:
         os.makedirs(transPath)
-    except OSError, e:
-        print >>sys.stderr, "Cannot create translation directory '%s': %s" % (transPath, e.strerror)
+    except OSError as e:
+        print("Cannot create translation directory '%s': %s" % (transPath, e.strerror), file=sys.stderr)
         sys.exit(1)
 
     # Extract everything
@@ -424,13 +422,10 @@ try:
     extractMaps(image, transPath)
     extractTextures(image, transPath)
 
-    print "Done."
+    print("Done.")
 
-except Exception, e:
+except Exception as e:
 
     # Pokemon exception handler
-    if e.message:
-        print >>sys.stderr, e.message
-        sys.exit(1)
-    else:
-        raise
+    print(e, file=sys.stderr)
+    sys.exit(1)

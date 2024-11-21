@@ -24,10 +24,9 @@ The included tools are:
 The tools are entirely written in Python and have the following
 dependencies:
 
- * Python 2.7
-   The tools are not compatible with Python 3.
+ * Python 3.11
 
- * Pillow >= 2.2.1 (https://pypi.python.org/pypi/Pillow/)
+ * Pillow >= 10.3.0 (https://pypi.python.org/pypi/Pillow/)
 
 Most of the tools use the included 'wa' package which must reside in the
 same directory as the tools themselves, or be included in the PYTHONPATH.

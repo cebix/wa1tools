@@ -28,7 +28,7 @@ class Archive:
         self.basePointer = pointers[0]
 
         # Compute the section sizes from the pointers and read the section data
-        for i in xrange(len(pointers) - 1):
+        for i in range(len(pointers) - 1):
             if pointers[i]:
                 if pointers[i + 1]:
                     self.sections.append(fileobj.read(pointers[i + 1] - pointers[i]))
@@ -51,12 +51,12 @@ class Archive:
 
     # Set the data of a section.
     def setSection(self, index, data):
-        self.sections[index] = data
+        self.sections[index] = bytearray(data)
 
         # Pad section data to a 32-bit boundary
         l = len(data)
         if l % 4:
-            self.sections[index] += '\0' * (4 - (l % 4))
+            self.sections[index].extend(b'\0' * (4 - (l % 4)))
 
     # Write all sections to a file object, truncating the file.
     def writeToFile(self, fileobj):
@@ -65,7 +65,7 @@ class Archive:
 
         # Write the pointer table
         p = self.basePointer
-        for index in xrange(self.numPointers):
+        for index in range(self.numPointers):
             if index < len(self.sections):
                 fileobj.write(struct.pack("<L", p))
                 p += len(self.sections[index])
@@ -79,4 +79,4 @@ class Archive:
         # Pad file to CD sector boundary
         offset = fileobj.tell() % 2048
         if offset:
-            fileobj.write('\0' * (2048 - offset))
+            fileobj.write(b'\0' * (2048 - offset))

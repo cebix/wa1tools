@@ -8,7 +8,7 @@
 # copyright notice and this permission notice appear in all copies.
 #
 
-from version import Version, isJapanese
+from .version import Version, isJapanese
 
 
 #

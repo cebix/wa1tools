@@ -288,17 +288,17 @@ class Instruction:
     # The text is encoded in the game character set and null-terminated.
     def getText(self):
         if self.op == Op.MESSAGE:
-            return str(self.bytes[1:])
+            return self.bytes[1:]
         elif self.op == Op.STRING:
-            return str(self.bytes)
+            return self.bytes
         else:
-            raise ValueError, "getText() called for instruction " + self.disass
+            raise ValueError("getText() called for instruction " + self.disass)
 
     # Set the text of MESSAGE and STRING instructions.
     # The text must be encoded in the game character set and null-terminated.
     def setText(self, text):
         if self.op == Op.MESSAGE:
-            self.bytes = bytearray(chr(Op.MESSAGE) + text)
+            self.bytes = bytearray([Op.MESSAGE]) + bytearray(text)
             self.length = len(self.bytes)
             self.disass = "message"
         elif self.op == Op.STRING:
@@ -306,7 +306,7 @@ class Instruction:
             self.length = len(self.bytes)
             self.disass = "string"
         else:
-            raise ValueError, "setText() called for instruction " + self.disass
+            raise ValueError("setText() called for instruction " + self.disass)
 
     # Relocate addresses within the instruction operands according to a
     # mapping of old to new addresses.
@@ -317,7 +317,7 @@ class Instruction:
 
             # Target address 0xfffe for CALL is special
             if self.op == Op.CALL and newAddr == 0xfffe:
-                raise ValueError, "Target address of CALL instruction at %04x relocated to %04x" % (self.addr, newAddr)
+                raise ValueError("Target address of CALL instruction at %04x relocated to %04x" % (self.addr, newAddr))
 
             struct.pack_into("<H", self.bytes, offset, newAddr)
 
@@ -344,9 +344,9 @@ def parseInstruction(data, offset, version, basePointer = mapBasePointer, kanjiB
     if (op == 0x05) or (op > 0x28) or (p == 0x20202020) or \
        ((op == 0x11) and (data[offset + 2] not in [0x00, 0xff])):
 
-        end = data.index('\0', offset)
+        end = data.index(b'\0', offset)
         length = end - offset + 1
-        t = wa.text.decode(str(data[offset:end]), version, kanjiBitmap)
+        t = wa.text.decode(data[offset:end], version, kanjiBitmap)
 
         return Instruction(Op.STRING, length, offsetToAddr(offset, basePointer), data[offset:end + 1], "string " + t)
 
@@ -358,8 +358,8 @@ def parseInstruction(data, offset, version, basePointer = mapBasePointer, kanjiB
     if op == Op.MESSAGE:
 
         # Operand is text until null byte
-        end = data.index('\0', offset)
-        disass += " " + wa.text.decode(str(data[offset + 1:end]), version, kanjiBitmap)
+        end = data.index(b'\0', offset)
+        disass += " " + wa.text.decode(data[offset + 1:end], version, kanjiBitmap)
         length = end - offset + 1
 
     elif op in [Op.CALL, Op.JUMP, Op.BREAK]:
@@ -469,7 +469,7 @@ def parseInstruction(data, offset, version, basePointer = mapBasePointer, kanjiB
             length += 2
         elif sel == 0x03:
             disass += " (buy)"
-            end = data.index('\xff', offset)
+            end = data.index(b'\xff', offset)
             length += end - offset - 1
         elif sel == 0x04:
             disass += " (sell)"
@@ -513,10 +513,10 @@ def parseInstruction(data, offset, version, basePointer = mapBasePointer, kanjiB
         sel = data[offset + 1]
 
         if sel in [0xfe, 0xff]:
-            end = data.index('\xff\xff', offset + 2)
+            end = data.index(b'\xff\xff', offset + 2)
             length = end - offset + 2
         else:
-            end = data.index('\xff', offset + 2)
+            end = data.index(b'\xff', offset + 2)
             length = end - offset + 1
 
         disass += " " + " ".join(map(hex, data[offset + 1:offset + length]))
@@ -674,7 +674,7 @@ class MapData:
 
     # Extract an entry table from the given offset range.
     def _extractEntries(self, offset, endOffset):
-        numEntries = (endOffset - offset) / 2
+        numEntries = (endOffset - offset) // 2
         return list(struct.unpack_from("<%dH" % numEntries, self.data, offset))
 
     # Extract the script entry table as a list of addresses.
@@ -776,8 +776,8 @@ class MapData:
             exeStart, exeEnd = self._findMipsCode()
 
             for offset, size in mapStringData[self.mapNumber]:
-                end = self.data.index('\0', exeStart + offset)
-                strings.append(str(self.data[exeStart + offset:end]))
+                end = self.data.index(b'\0', exeStart + offset)
+                strings.append(self.data[exeStart + offset:end])
 
         return strings
 
@@ -787,8 +787,8 @@ class MapData:
         # Remove bogus pointers from scripts because we don't want to
         # relocate and realign them, and they may cause problems during
         # script extraction when inserted unchanged
-        script1 = filter(lambda instr: instr.op != Op.PTR, script1)
-        script2 = filter(lambda instr: instr.op != Op.PTR, script2)
+        script1 = [instr for instr in script1 if instr.op != Op.PTR]
+        script2 = [instr for instr in script2 if instr.op != Op.PTR]
 
         # Copy all data preceding the entry table
         newData = self.data[0:self.entryTableStart]
@@ -811,22 +811,22 @@ class MapData:
 
         # Create a new, relocated entry table and append it
         entries = self.getGlobalEntries()
-        entryData = ""
+        entryData = bytearray()
 
         for e in entries:
             try:
                 newAddr = addrMap[e]
             except KeyError:
                 newAddr = 0  # unused entry
-            entryData += struct.pack("<H", newAddr)
+            entryData.extend(struct.pack("<H", newAddr))
 
-        newData += entryData
+        newData.extend(entryData)
 
         # Relocate and append the first script section
         assert(len(newData) == self.script1Start)
 
         script1 = fixupScript(script1, addrMap)
-        newData += getScriptData(script1)
+        newData.extend(getScriptData(script1))
         newData = align4(newData)
 
         # Add bogus pointer before next section
@@ -837,7 +837,7 @@ class MapData:
             assert(len(newData) == self.script2Start)
 
             script2 = fixupScript(script2, addrMap)
-            newData += getScriptData(script2)
+            newData.extend(getScriptData(script2))
             newData = align4(newData)
 
             self.script2End = len(newData)
@@ -853,11 +853,11 @@ class MapData:
         start = min(self.offsets[Section.MUSIC_TABLE], self.offsets[Section.KANJI])
         deltaOffset = len(newData) - start  # correction value for pointers and offsets due to changed script size
 
-        newData += self.data[start:gfxStart]
+        newData.extend(self.data[start:gfxStart])
         if len(newData) > gfxStart:
             newData = newData[:gfxStart]
         elif len(newData) < gfxStart:
-            newData += bytearray(gfxStart - len(newData))
+            newData.extend(bytearray(gfxStart - len(newData)))
 
         assert(len(newData) == gfxStart)
 
@@ -882,7 +882,7 @@ class MapData:
         exeEnd += deltaOffset
 
         if exeEnd > gfxStart:
-            raise IndexError, "Map data overrun"
+            raise IndexError("Map data overrun")
 
         offset = exeStart
         while offset < exeEnd:
@@ -946,10 +946,10 @@ class MapData:
                         relocType = Reloc.HILO_2
 
                     else:
-                        raise ValueError, "Unrecognized MIPS instruction sequence %08x %08x %08x" % (w, w2, w3)
+                        raise ValueError("Unrecognized MIPS instruction sequence %08x %08x %08x" % (w, w2, w3))
 
                 else:
-                    raise ValueError, "Unrecognized MIPS instruction sequence %08x %08x %08x" % (w, w2, w3)
+                    raise ValueError("Unrecognized MIPS instruction sequence %08x %08x %08x" % (w, w2, w3))
 
             if relocType == Reloc.POINTER:
 
@@ -960,7 +960,7 @@ class MapData:
             elif relocType == Reloc.JUMP:
 
                 # Stuff in the new operand
-                n = (w & 0xfc000000) | ((w & 0x03ffffff) + (deltaOffset / 4))
+                n = (w & 0xfc000000) | ((w & 0x03ffffff) + (deltaOffset // 4))
                 struct.pack_into("<L", newData, offset, n)
 
             elif relocType == Reloc.HILO:
@@ -998,12 +998,12 @@ class MapData:
         # Insert the strings in the MIPS code
         if codeStrings:
             mapStringData = wa.data.mapStringData(self.version)[self.mapNumber]
-            for i in xrange(len(codeStrings)):
+            for i in range(len(codeStrings)):
                 s = codeStrings[i]
                 offset, maxSize = mapStringData[i]
 
                 if len(s) < maxSize:
-                    s += '\0' * (maxSize - len(s))  # pad with null bytes
+                    s += b'\0' * (maxSize - len(s))  # pad with null bytes
 
                 newData[exeStart + offset:exeStart + offset + maxSize] = s
 
@@ -1027,7 +1027,7 @@ class MapData:
             struct.pack_into("<L", newData, offset, p + deltaOffset)
 
         # Copy graphics and sound data
-        newData += self.data[0x15000:]
+        newData.extend(self.data[0x15000:])
 
         # Set the new data block
         self.setData(newData)
