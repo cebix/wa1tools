@@ -596,16 +596,17 @@ Section = _enum(
     SCRIPT_1    =  7,  # first script code section
     SCRIPT_2    =  8,  # second script code section (optional)
     FLAG        =  9,  # flag byte
+    ENCOUNTER   = 11,  # random encounter data
     KANJI       = 14,  # Kanji bitmap
     MUSIC_TABLE = 16,  # music offset table
     MUSIC_DATA  = 17,  # music data (VABs and LZSS-compressed SEQs)
 )
 
 
-# Object representing a aap data block.
+# Object representing a map data block.
 class MapData:
 
-    # Create a Map object from a data block.
+    # Create a MapData object from a binary data block.
     def __init__(self, mapBlock, mapNumber, version):
         self.version = version
         self.mapNumber = mapNumber
@@ -1020,6 +1021,18 @@ class MapData:
                 offset = addrToOffset(instr.addr)
                 p = struct.unpack_from("<L", newData, offset + 1)[0]
                 struct.pack_into("<L", newData, offset + 1, p + deltaOffset)
+
+        # Update pointers in encounter data section
+        p = struct.unpack_from("<L", newData, 0x40 + Section.ENCOUNTER * 4)[0]
+        if p:
+            offset = pointerToOffset(p)
+            p = struct.unpack_from("<L", newData, 0x40 + Section.MUSIC_TABLE * 4)[0]
+            end = pointerToOffset(p)
+            while offset < end:
+                p = struct.unpack_from("<L", newData, offset)[0]
+                if p >= mapBasePointer and p < mapGfxPointer:
+                    struct.pack_into("<L", newData, offset, p + deltaOffset)
+                offset += 4
 
         # Update pointers and offsets in the executable header
         for offset in [0, 12]:
