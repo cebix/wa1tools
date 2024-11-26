@@ -1034,6 +1034,18 @@ class MapData:
                     struct.pack_into("<L", newData, offset, p + deltaOffset)
                 offset += 4
 
+        # Update pointers in world map section 12
+        p = struct.unpack_from("<L", newData, 0x40 + 12 * 4)[0]
+        if p:
+            offset = pointerToOffset(p)
+            while True:
+                p = struct.unpack_from("<L", newData, offset)[0]
+                if p >= mapBasePointer and p < mapGfxPointer:
+                    struct.pack_into("<L", newData, offset, p + deltaOffset)
+                else:
+                    break
+                offset += 4
+
         # Update pointers and offsets in the executable header
         for offset in [0, 12]:
             p = struct.unpack_from("<L", newData, offset)[0]
