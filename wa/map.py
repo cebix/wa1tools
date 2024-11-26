@@ -342,7 +342,8 @@ def parseInstruction(data, offset, version, basePointer = mapBasePointer, kanjiB
     # code, or to look for the "addr" expression opcodes which reference
     # the strings.
     if (op == 0x05) or (op > 0x28) or (p == 0x20202020) or \
-       ((op == 0x11) and (data[offset + 2] not in [0x00, 0xff])):
+       ((op == 0x11) and (data[offset + 2] not in [0x00, 0xff])) or \
+       ((op == 0x20) and (data[offset + 1] >= 0x20)):
 
         end = data.index(b'\0', offset)
         length = end - offset + 1
