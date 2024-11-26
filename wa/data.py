@@ -178,6 +178,57 @@ execFileData2_EN = [
     (0xc1ac8, 1,  4, None, "exe", "ok.txt"),
 ]
 
+# FR version
+execFileData_FR = [
+
+    # tableOffset, numStrings, dataOffset, dataSize, specialBytes, specialHack, transDir, transFileName
+    ( 0xf44,   6,   None,  0xb4, 0, False, "exe", "menu_help.txt"),
+    (0x1014, 256,   None, 0xabc, 1, False, "exe", "item.txt"),
+    (0x1ed4, 256,   None, 0xb7c, 0, False, "exe", "item_help.txt"),
+    (0x525c,   8,   None,  0x5c, 1, False, "exe", "arm.txt"),
+    (0x52dc,   8,   None,  0xc4, 0, False, "exe", "arm_help.txt"),
+    (0x5428,  33,   None,  0xd4, 1, False, "exe", "fast_draw.txt"),
+    (0x5584,  32,   None, 0x2f0, 0, False, "exe", "fast_draw_help.txt"),
+    (0x5abc,  46, 0x60f4, 0x1fc, 1, False, "exe", "magic2.txt"),
+    (0x62f4,  64,   None, 0x668, 0, False, "exe", "magic_help.txt"),
+    (0x7068,  18,   None,  0x94, 0, False, "exe", "auto_cmd.txt"),
+    (0x7148,  18,   None,  0xb4, 0, False, "exe", "auto_cmd_help.txt"),
+    (0x7248,   3,   None,  0x18, 0, False, "exe", "technique.txt"),
+    (0x7270,  10,   None,  0x68, 3, False, "exe", "config.txt"),
+    (0x7304,  10,   None,  0xd0, 0, False, "exe", "config_help.txt"),
+    (0x7400,  31,   None, 0x118, 1,  True, "exe", "config_setting.txt"),
+    (0x7598,  12,   None,  0x84, 0, False, "exe", "menu.txt"),
+    (0x7650,   2,   None,  0x1c, 0, False, "exe", "menu2.txt"),
+    (0x7678,  12,   None,  0x58, 0, False, "exe", "tool.txt"),
+    (0x7704,  12,   None, 0x12c, 0, False, "exe", "tool_help.txt"),
+    (0x7864, 128,   None, 0x32c, 0, False, "exe", "map_name.txt"),
+    (0x87f0,  20,   None, 0x308, 1, False, "exe", "memory_card.txt"),
+    (0x8bac,  21,   None,  0x80, 0, False, "exe", "icon.txt"),
+    (0x8c84,  10,   None,  0x50, 0, False, "exe", "window.txt"),
+    (0x8d00,  22,   None, 0x1e0, 0, False, "exe", "load_save.txt"),
+    (0x91e4,  13,   None,  0x60, 0, False, "exe", "controller.txt"),
+    (0x9334,   6,   None,  0x74, 0, False, "exe", "load_save2.txt"),
+    (0x9684,  70,   None, 0x58c, 0, False, "exe", "battle.txt"),
+    (0x9da4, 256,   None, 0x78c, 0, False, "exe", "enemy.txt"),
+    (0xa958,  11,   None,  0xdc, 0, False, "exe", "command_help.txt"),
+    (0xb4a0, 214,   None, 0xb84, 1, False, "exe", "attack.txt"),
+    (0xcf8c,  13,   None,  0xb4, 0, False, "exe", "force.txt"),
+    (0xd078,  14,   None, 0x18c, 0, False, "exe", "force_help.txt"),
+    (0xd2b8,  21,   None,  0xe4, 1, False, "exe", "guardian.txt"),
+]
+
+execFileData2_FR = [
+
+    # offset, numStrings, maxStringLen, encoding, transDir, transFileName
+    (  0xed0, 4, 19, None, "exe", "job.txt"),
+    (  0xf1c, 5,  7, None, "exe", "luck.txt"),
+    ( 0x8b4c, 1, 92, None, "exe", "name_entry.txt"),
+    ( 0x92d6, 1, 18, None, "exe", "best_runners.txt"),
+    ( 0xebc0, 1, 20, None, "exe", "trial_result.txt"),
+    (0xc22a8, 1,  8, None, "exe", "miss.txt"),
+    (0xc22f0, 1,  4, None, "exe", "ok.txt"),
+]
+
 # DE version
 execFileData_DE = [
 
@@ -229,7 +280,58 @@ execFileData2_DE = [
     (0xc1fd4, 1,  4, None, "exe", "ok.txt"),
 ]
 
-# EN version
+# IT version
+execFileData_IT = [
+
+    # tableOffset, numStrings, dataOffset, dataSize, specialBytes, specialHack, transDir, transFileName
+    ( 0xf44,   6,   None,  0xc0, 0, False, "exe", "menu_help.txt"),
+    (0x1020, 256,   None, 0xad0, 1, False, "exe", "item.txt"),
+    (0x1ef4, 256,   None, 0xaa4, 0, False, "exe", "item_help.txt"),
+    (0x51a4,   8,   None,  0x54, 1, False, "exe", "arm.txt"),
+    (0x521c,   8,   None,  0xb4, 0, False, "exe", "arm_help.txt"),
+    (0x5358,  33,   None,  0xd4, 1, False, "exe", "fast_draw.txt"),
+    (0x54b4,  32,   None, 0x2e0, 0, False, "exe", "fast_draw_help.txt"),
+    (0x59dc,  46, 0x6014, 0x1d4, 1, False, "exe", "magic2.txt"),
+    (0x61ec,  64,   None, 0x5e0, 0, False, "exe", "magic_help.txt"),
+    (0x6ed8,  18,   None,  0x84, 0, False, "exe", "auto_cmd.txt"),
+    (0x6fa8,  18,   None,  0xa8, 0, False, "exe", "auto_cmd_help.txt"),
+    (0x709c,   3,   None,  0x18, 0, False, "exe", "technique.txt"),
+    (0x70c4,  10,   None,  0x64, 3, False, "exe", "config.txt"),
+    (0x7154,  10,   None,  0xc8, 0, False, "exe", "config_help.txt"),
+    (0x724c,  31,   None, 0x10c, 1,  True, "exe", "config_setting.txt"),
+    (0x73d8,  12,   None,  0x7c, 0, False, "exe", "menu.txt"),
+    (0x7488,   2,   None,  0x18, 0, False, "exe", "menu2.txt"),
+    (0x74ac,  12,   None,  0x54, 0, False, "exe", "tool.txt"),
+    (0x7534,  12,   None, 0x10c, 0, False, "exe", "tool_help.txt"),
+    (0x7674, 128,   None, 0x31c, 0, False, "exe", "map_name.txt"),
+    (0x85f0,  20,   None, 0x2c4, 1, False, "exe", "memory_card.txt"),
+    (0x8968,  21,   None,  0x90, 0, False, "exe", "icon.txt"),
+    (0x8a50,  10,   None,  0x5c, 0, False, "exe", "window.txt"),
+    (0x8ad8,  22,   None, 0x1b0, 0, False, "exe", "load_save.txt"),
+    (0x8f8c,  13,   None,  0x74, 0, False, "exe", "controller.txt"),
+    (0x90f0,   6,   None,  0x64, 0, False, "exe", "load_save2.txt"),
+    (0x9418,  70,   None, 0x4f0, 0, False, "exe", "battle.txt"),
+    (0x9a9c, 256,   None, 0x79c, 0, False, "exe", "enemy.txt"),
+    (0xa65c,  11,   None,  0xd4, 0, False, "exe", "command_help.txt"),
+    (0xb19c, 214,   None, 0xa70, 1, False, "exe", "attack.txt"),
+    (0xcb74,  13,   None,  0xa0, 0, False, "exe", "force.txt"),
+    (0xcc4c,  14,   None, 0x16c, 0, False, "exe", "force_help.txt"),
+    (0xce6c,  21,   None,  0xe0, 1, False, "exe", "guardian.txt"),
+]
+
+execFileData2_IT = [
+
+    # offset, numStrings, maxStringLen, encoding, transDir, transFileName
+    (  0xed0, 4, 19, None, "exe", "job.txt"),
+    (  0xf1c, 5,  7, None, "exe", "luck.txt"),
+    ( 0x8908, 1, 92, None, "exe", "name_entry.txt"),
+    ( 0x9092, 1, 18, None, "exe", "best_runners.txt"),
+    ( 0xe770, 1, 20, None, "exe", "trial_result.txt"),
+    (0xc1e58, 1,  8, None, "exe", "miss.txt"),
+    (0xc1ea0, 1,  4, None, "exe", "ok.txt"),
+]
+
+# ES version
 execFileData_ES = [
 
     # tableOffset, numStrings, dataOffset, dataSize, specialBytes, specialHack, transDir, transFileName
@@ -288,8 +390,12 @@ def execFileData(version):
         return execFileData_US
     elif version == Version.EN:
         return execFileData_EN
+    elif version == Version.FR:
+        return execFileData_FR
     elif version == Version.DE:
         return execFileData_DE
+    elif version == Version.IT:
+        return execFileData_IT
     elif version == Version.ES:
         return execFileData_ES
     else:
@@ -304,8 +410,12 @@ def execFileData2(version):
         return execFileData2_US
     elif version == Version.EN:
         return execFileData2_EN
+    elif version == Version.FR:
+        return execFileData2_FR
     elif version == Version.DE:
         return execFileData2_DE
+    elif version == Version.IT:
+        return execFileData2_IT
     elif version == Version.ES:
         return execFileData2_ES
     else:
@@ -318,8 +428,12 @@ def mapNameTableOffset(version):
         return 0x7578
     elif version == Version.EN:
         return 0x7570
+    elif version == Version.FR:
+        return 0x7864
     elif version == Version.DE:
         return 0x7714
+    elif version == Version.IT:
+        return 0x7674
     elif version == Version.ES:
         return 0x7540
     else:
@@ -361,12 +475,28 @@ utilFileData_EN = [
     (0xdab0,  4, 0x278,  0x20,  9, "exe", "character.txt"),
 ]
 
+# FR version
+utilFileData_FR = [
+
+    # tableOffset, numStrings, dataOffset, dataSize, maxStringLen, transDir, transFileName
+    (0xd9a0, 64,   0x0, 0x27c, 14, "exe", "magic.txt"),
+    (0xdaa0,  4, 0x27c,  0x20,  9, "exe", "character.txt"),
+]
+
 # DE version
 utilFileData_DE = [
 
     # tableOffset, numStrings, dataOffset, dataBytes, maxStringLen, transDir, transFileName
     (0xd9a0, 64,   0x0, 0x278, 11, "exe", "magic.txt"),
     (0xdaa0,  4, 0x278,  0x20,  9, "exe", "character.txt"),
+]
+
+# IT version
+utilFileData_IT = [
+
+    # tableOffset, numStrings, dataOffset, dataBytes, maxStringLen, transDir, transFileName
+    (0xd9a8, 64,   0x0, 0x280, 11, "exe", "magic.txt"),
+    (0xdaa8,  4, 0x280,  0x20,  9, "exe", "character.txt"),
 ]
 
 # ES version
@@ -387,8 +517,12 @@ def utilFileData(version):
         return utilFileData_US
     elif version == Version.EN:
         return utilFileData_EN
+    elif version == Version.FR:
+        return utilFileData_FR
     elif version == Version.DE:
         return utilFileData_DE
+    elif version == Version.IT:
+        return utilFileData_IT
     elif version == Version.ES:
         return utilFileData_ES
     else:
@@ -463,11 +597,25 @@ fontData_EN = [
     (0xe594, 224, 8, 16, 0, 16, "gfx", "dialog_font.png"),
 ]
 
+# FR version
+fontData_FR = [
+
+    # offset, numChars, charWidth, charHeight, outCharsPerRow, transDir, transFileName
+    (0xebd4, 224, 8, 16, 0, 16, "gfx", "dialog_font.png"),
+]
+
 # DE version
 fontData_DE = [
 
     # offset, numChars, charWidth, charHeight, outCharsPerRow, transDir, transFileName
     (0xe8b8, 224, 8, 16, 0, 16, "gfx", "dialog_font.png"),
+]
+
+# IT version
+fontData_IT = [
+
+    # offset, numChars, charWidth, charHeight, outCharsPerRow, transDir, transFileName
+    (0xe784, 224, 8, 16, 0, 16, "gfx", "dialog_font.png"),
 ]
 
 # ES version
@@ -487,8 +635,12 @@ def fontData(version):
         return fontData_US
     elif version == Version.EN:
         return fontData_EN
+    elif version == Version.FR:
+        return fontData_FR
     elif version == Version.DE:
         return fontData_DE
+    elif version == Version.IT:
+        return fontData_IT
     elif version == Version.ES:
         return fontData_ES
     else:
@@ -520,11 +672,25 @@ execScriptData_EN = (
     0x8f8c, 10, 0x9084, 0x1a8
 )
 
+# FR version
+execScriptData_FR = (
+
+    # tableOffset, numScripts, dataOffset, dataSize
+    0x93c4, 10, 0x94bc, 0x1c4
+)
+
 # DE version
 execScriptData_DE = (
 
     # tableOffset, numScripts, dataOffset, dataSize
     0x9254, 10, 0x934c, 0x198
+)
+
+# IT version
+execScriptData_IT = (
+
+    # tableOffset, numScripts, dataOffset, dataSize
+    0x9170, 10, 0x9268, 0x1ac
 )
 
 # ES version
@@ -542,8 +708,12 @@ def execScriptData(version):
         return execScriptData_US
     elif version == Version.EN:
         return execScriptData_EN
+    elif version == Version.FR:
+        return execScriptData_FR
     elif version == Version.DE:
         return execScriptData_DE
+    elif version == Version.IT:
+        return execScriptData_IT
     elif version == Version.ES:
         return execScriptData_ES
     else:
