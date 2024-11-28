@@ -720,7 +720,6 @@ def execScriptData(version):
         return None
 
 
-
 #
 # Textures in archive files
 #
@@ -746,3 +745,40 @@ textureData = [
         (2, 0, (256, 256), 0x260, "menu_labels.png"),
     ]),
 ]
+
+
+#
+# Textures in OP0.BIN
+#
+
+# JP version
+openingData_JP = [
+
+    # clutSize, dimensions, transFileName
+    (256, (512, 480), "op_title.png"),
+    ( 16, (256,  16), "op_push_start.png"),
+    ( 16, (256,  65), "op_demo.png"),
+]
+
+# Other versions
+openingData_INT = [
+
+    # clutSize, dimensions, transFileName
+    (256, (512, 480), "op_title.png"),
+    ( 16, (256,  16), "op_push_start.png"),
+    ( 16, ( 64, 260), "op_demo.png"),
+]
+
+
+def openingData(version):
+    if isJapanese(version):
+        return openingData_JP
+    else:
+        return openingData_INT
+
+
+def openingTableOffset(version):
+    if isJapanese(version) or (version == Version.US):
+        return 0x2868
+    else:
+        return 0x21b0

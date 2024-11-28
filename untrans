@@ -307,7 +307,18 @@ def convertABGR(data):
     return bytes(output)
 
 
-# Extract textures from menu graphics archives.
+# Expand 4-bit pixel data to 8-bit
+def expand4Bit(data):
+    output = bytearray()
+
+    for x in data:
+        output.append(x & 0x0f)
+        output.append(x >> 4)
+
+    return output
+
+
+# Extract textures from menu graphics archives and opening data file.
 def extractTextures(image, transPath):
     print("Dumping textures...")
 
@@ -328,13 +339,10 @@ def extractTextures(image, transPath):
             pixelData = wa.lzss.decompress(archive.getSection(pixelSection))
 
             # Expand 4-bit pixel data to 8-bit
-            output = bytearray()
-            for x in pixelData:
-                output.append(x & 0x0f)
-                output.append(x >> 4)
+            pixelData = expand4Bit(pixelData)
 
             # Convert to image
-            img = Image.frombytes("P", dimensions, output, "raw", "P", 0, 1)
+            img = Image.frombytes("P", dimensions, pixelData, "raw", "P", 0, 1)
             img.palette = ImagePalette.raw("BGR;15", convertABGR(clutData))
 
             # Write output image in PNG format
@@ -343,6 +351,35 @@ def extractTextures(image, transPath):
                 os.mkdir(outputDir)
 
             img.save(os.path.join(outputDir, transFileName), "PNG")
+
+    # Load opening executable and fetch the pointer table
+    data = image.openFile("EXE", "OPENING.EXE").read()
+    pointers = struct.unpack_from("<3L", data, wa.data.openingTableOffset(image.version))
+
+    # Load opening data file
+    data = image.openFile("SYS", "OP0.BIN").read()
+
+    for pointer, (clutSize, dimensions, transFileName) in zip(pointers, wa.data.openingData(image.version)):
+        offset = pointer - 0x80080000
+
+        # Retrieve CLUT and pixel data
+        clutData = data[offset:offset + clutSize * 2]
+        pixelData = wa.lzss.decompress(data[offset + 0x200:])
+
+        # Expand 4-bit pixel data to 8-bit
+        if clutSize == 16:
+            pixelData = expand4Bit(pixelData)
+
+        # Convert to image
+        img = Image.frombytes("P", dimensions, pixelData, "raw", "P", 0, 1)
+        img.palette = ImagePalette.raw("BGR;15", convertABGR(clutData))
+
+        # Write output image in PNG format
+        outputDir = os.path.join(transPath, transDir)
+        if not os.path.isdir(outputDir):
+            os.mkdir(outputDir)
+
+        img.save(os.path.join(outputDir, transFileName), "PNG")
 
 
 # Print usage information and exit.

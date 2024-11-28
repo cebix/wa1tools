@@ -7,10 +7,10 @@ used for modding the game, searching for hidden content, and creating fan
 translations. The main focus of the tools is on the dumping and editing of
 in-game text.
 
-NOTE: These tools had been developed for a fan translation project that
-never got beyond the concept stage and has been abandoned many years ago.
-As such, the tools were never extensively tested in a production setting,
-and for the time being I do not maintain or support them in any way.
+NOTE: These tools were originally developed for a fan translation project
+that never got beyond the concept stage and has been abandoned many years
+ago. As such, the tools have never been extensively tested in a production
+setting and for the time being I do not maintain or support them in any way.
 
 The included tools are:
 
@@ -28,8 +28,8 @@ dependencies:
 
  * Pillow >= 10.3.0 (https://pypi.python.org/pypi/Pillow/)
 
-Most of the tools use the included 'wa' package which must reside in the
-same directory as the tools themselves, or be included in the PYTHONPATH.
+The tools use the included 'wa' package which must reside in the same
+directory as the tools themselves, or be included in the PYTHONPATH.
 
 
 Restrictions and general information
@@ -51,7 +51,9 @@ The tools support the following releases of the game:
  * Wild Arms, Japanese release (SCPS-10028)
  * Wild Arms, US release (SCUS-94608)
  * Wild Arms, English European release (SCES-00321)
+ * Wild Arms, French European release (SCES-01171)
  * Wild Arms, German European release (SCES-01172)
+ * Wild Arms, Italian European release (SCES-01173)
  * Wild Arms, Spanish European release (SCES-01174)
 
 The 'trans' tool does not work with the Japanese version of the game because
@@ -357,6 +359,12 @@ files:
       If you want to customize the name entry screen you need to change both
       files in a consistent way.
 
+    op_title.png
+    op_push_start.png
+    op_demo.png
+      The elements of the game's title screen. The "demo" image is unused by
+      retail versions of the game.
+
 
 Warning and error messages of 'trans'
 
@@ -401,20 +409,31 @@ Warning and error messages of 'trans'
     the particular game version. See the section "Character set" further
     below for a list of supported characters.
 
-    Note: Due to an oversight by the developers, the US release of the game
-    contains invalid characters in the following files which are a remnant
-    of the Japanese character set:
-
-      map/003.txt, string 144
-      map/037.txt, strings 135 and 136
-      map/119.txt, strings 135 and 136
-
-    You should remove the invalid characters before running 'trans'.
-
   "Image '<file>' expected to be of size (<w>, <h>) but found (<w>, <h>)"
     The size (width, height) of an image file in the "gfx" subdirectory of
     the translation directory has been changed from the original image. The
     'trans' tool can only insert images which have the exact same size.
+
+
+Known problems in the official translations
+
+The US release of the game contains invalid characters in the following
+files which are a remnant of the Japanese character set:
+
+  map/003.txt, string 144
+  map/037.txt, strings 135 and 136
+  map/119.txt, strings 135 and 136
+
+The German release also has one invalid character:
+
+  map/005.txt, string 138
+
+The Italian release has an invalid "{COLOR C}" control code, where the "C"
+probably belongs to the next word, and the actual code should be "{COLOR 4}":
+
+  map/016.txt, string 41
+
+You should correct these strings before running 'trans'.
 
 
 Text which is not extracted
