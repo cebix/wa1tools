@@ -9,7 +9,7 @@
 #
 
 __author__ = "Christian Bauer <www.cebix.net>"
-__version__ = "1.0"
+__version__ = "1.1"
 
 
 import os

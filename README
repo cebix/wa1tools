@@ -1,4 +1,4 @@
-WA1Tools V1.0
+WA1Tools V1.1
 =============
 
 WA1Tools is a suite of command-line translation and hacking tools for the
@@ -99,10 +99,12 @@ tool creates backups (with the ending ".orig") of all files it changes:
   SYSTEM.CNF
   BIN/CDSTG.BIN
   EXE/WILDARMS.EXE
+  EXE/OPENING.EXE
   SYS/SY0.BIN
   SYS/SY1.BIN
   SYS/UT0.BIN
   SYS/UT0.OVR
+  SYS/OP0.BIN
 
 To put the files changed by 'trans' back into the actual game you either
 have to replace these files directly in the CD image (for example with the
@@ -441,7 +443,7 @@ Text which is not extracted
   Some of the text in the game is not extractable or changable with the
   'trans' and 'untrans' tools:
 
-   * The title screen and the "Push Start Button" text.
+   * Text embedded in map tilesets.
 
    * The ending credits which are hardcoded into the ending movie.
 
