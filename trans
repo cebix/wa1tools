@@ -539,6 +539,34 @@ def translateMaps(transPath, image):
     mapFile.close()
 
 
+# Extract pixel data from image file.
+def getPixels(transPath, transDir, transFileName, dimensions, clutSize):
+
+    # Load the image file
+    filePath = os.path.join(transPath, transDir, transFileName)
+    img = Image.open(filePath)
+
+    imageWidth, imageHeight = dimensions
+
+    if img.size != dimensions:
+        raise EnvironmentError("Image '%s' expected to be of size (%d, %d) but found (%d, %d)" % (transFileName, imageWidth, imageHeight, img.size[0], img.size[1]))
+
+    if img.mode != "P":
+        raise EnvironmentError("Image '%s' is not in indexed color mode" % transFileName)
+
+    # Convert 8-bit image to 4-bit pixel data
+    pixelData = img.tobytes()
+    if clutSize == 16:
+        input = pixelData
+        pixelData = bytearray()
+        for i in range(0, len(input), 2):
+            p1 = input[i] & 0x0f
+            p2 = input[i + 1] & 0x0f
+            pixelData.append((p2 << 4) | p1)
+
+    return pixelData
+
+
 # Insert textures into menu graphics archives and opening data file.
 def translateTextures(transPath, image):
     print("Inserting textures...")
@@ -571,26 +599,9 @@ def translateTextures(transPath, image):
         for pixelSection, clutSection, dimensions, clutOffset, transFileName in textureList:
 
             # Load the image file
-            filePath = os.path.join(transPath, transDir, transFileName)
-            img = Image.open(filePath)
+            pixelData = getPixels(transPath, transDir, transFileName, dimensions, 16)
 
-            imageWidth, imageHeight = dimensions
-
-            if img.size != dimensions:
-                raise EnvironmentError("Image '%s' expected to be of size (%d, %d) but found (%d, %d)" % (transFileName, imageWidth, imageHeight, img.size[0], img.size[1]))
-
-            if img.mode != "P":
-                raise EnvironmentError("Image '%s' is not in indexed color mode" % transFileName)
-
-            # Convert image to 4-bit pixel data
-            input = img.tobytes()
-            pixelData = bytearray()
-            for i in range(0, len(input), 2):
-                p1 = input[i] & 0x0f
-                p2 = input[i + 1] & 0x0f
-                pixelData.append((p2 << 4) | p1)
-
-            # Compress data and add to archive
+            # Compress pixel data and add to archive
             archive.setSection(pixelSection, wa.lzss.compress(pixelData))
 
         # Save the archive
@@ -607,6 +618,7 @@ def translateTextures(transPath, image):
         # Restore the extra data following the archive
         file.write(extraData)
         file.close()
+
 
     # Load opening executable and fetch the pointer table
     exeFile = openForUpdate(image, "EXE", "OPENING.EXE")
@@ -630,28 +642,9 @@ def translateTextures(transPath, image):
         clutSize, dimensions, transFileName = wa.data.openingData(image.version)[s]
 
         # Load the image file
-        filePath = os.path.join(transPath, transDir, transFileName)
-        img = Image.open(filePath)
+        pixelData = getPixels(transPath, transDir, transFileName, dimensions, clutSize)
 
-        imageWidth, imageHeight = dimensions
-
-        if img.size != dimensions:
-            raise EnvironmentError("Image '%s' expected to be of size (%d, %d) but found (%d, %d)" % (transFileName, imageWidth, imageHeight, img.size[0], img.size[1]))
-
-        if img.mode != "P":
-            raise EnvironmentError("Image '%s' is not in indexed color mode" % transFileName)
-
-        # Convert 8-bit image to 4-bit pixel data
-        pixelData = img.tobytes()
-        if clutSize == 16:
-            input = pixelData
-            pixelData = bytearray()
-            for i in range(0, len(input), 2):
-                p1 = input[i] & 0x0f
-                p2 = input[i + 1] & 0x0f
-                pixelData.append((p2 << 4) | p1)
-
-        # Compress data and add to section
+        # Compress pixel data and add to section
         clut = sections[s][0:0x200]
         sections[s] = clut + wa.lzss.compress(pixelData)
 
@@ -677,6 +670,33 @@ def translateTextures(transPath, image):
     exeFile.seek(wa.data.openingTableOffset(image.version))
     exeFile.write(struct.pack("<7L", *pointers))
     exeFile.close()
+
+
+    # Load battle icons image and compress
+    pixelData = getPixels(transPath, transDir, "battle_icons.png", (256, 256), 16)
+    battleIconData = wa.lzss.compress(pixelData)
+
+    # Process battle field data blocks
+    flrFile = openForUpdate(image, "BIN", "CDFLR.BIN")
+
+    blockSize = 0x3a000
+    for blockNum in range(67):
+
+        # Read block
+        data = flrFile.read(blockSize)
+        file = io.BytesIO(data)
+        archive = wa.archive.Archive(file)
+
+        # Replace icon image
+        archive.setSection(49, battleIconData)
+
+        # Recreate archive
+        file = io.BytesIO()
+        archive.writeToFile(file)
+
+        # Write block back
+        flrFile.seek(blockNum * blockSize)
+        flrFile.write(file.getbuffer()[0:blockSize])
 
 
 # Print usage information and exit.

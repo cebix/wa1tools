@@ -7,11 +7,6 @@ used for modding the game, searching for hidden content, and creating fan
 translations. The main focus of the tools is on the dumping and editing of
 in-game text.
 
-NOTE: These tools were originally developed for a fan translation project
-that never got beyond the concept stage and has been abandoned many years
-ago. As such, the tools have never been extensively tested in a production
-setting and for the time being I do not maintain or support them in any way.
-
 The included tools are:
 
  * trans / untrans
@@ -98,6 +93,7 @@ tool creates backups (with the ending ".orig") of all files it changes:
 
   SYSTEM.CNF
   BIN/CDSTG.BIN
+  BIN/CDFLR.BIN
   EXE/WILDARMS.EXE
   EXE/OPENING.EXE
   SYS/SY0.BIN
@@ -293,10 +289,10 @@ files:
     make any changes to the color palette. The 'untrans' tool gives each
     image a default palette which is why some icons in the images show up
     with the wrong colors (the game actually uses different palettes for
-    each part of a texture). The 'trans' tool ignores the palette from the
-    image file completely, and only looks at the pixel values in the image
-    data (0..15, since the game uses 4-bit textures). It also never changes
-    the color palettes defined in the game files.
+    different parts of a texture). The 'trans' tool ignores the palette from
+    the image file completely, and only looks at the pixel values in the
+    image data (0..15, since the game uses 4-bit textures). It also never
+    changes the color palettes defined in the game files.
 
     The directory contains the following files, which vary between game
     versions:
@@ -344,6 +340,10 @@ files:
     menu_labels.png
       This texture contains the labels for the game's menus ("HP", "LV",
       "EXP", "Gella" etc.), texts for battles ("LEVEL UP!"), and some icons.
+
+    battle_icons.png
+      This texture has the "CONDITION GREEN!" and "CHARGE UP!" icons which
+      come up in battles.
 
     load_save.png
     memory_card.png
@@ -429,6 +429,11 @@ files which are a remnant of the Japanese character set:
 The German release also has one invalid character:
 
   map/005.txt, string 138
+
+The Spanish release has an invalid "{COLOR \0}" control code which should be
+"{COLOR 1}":
+
+  map/040.txt, string 107
 
 The Italian release has an invalid "{COLOR C}" control code, where the "C"
 probably belongs to the next word, and the actual code should be "{COLOR 4}":

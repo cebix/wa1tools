@@ -503,7 +503,7 @@ utilFileData_IT = [
 utilFileData_ES = [
 
     # tableOffset, numStrings, dataOffset, dataSize, maxStringLen, transDir, transFileName
-    (0xd9a8, 64,   0x0, 0x284, 11, "exe", "magic.txt"),
+    (0xd9a8, 64,   0x0, 0x284, 13, "exe", "magic.txt"),
     (0xdaa8,  4, 0x284,  0x20,  9, "exe", "character.txt"),
 ]
 

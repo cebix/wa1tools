@@ -23,12 +23,17 @@ class Archive:
 
         # Read the pointer table
         data = fileobj.read(self.numPointers * 4)
-        pointers = struct.unpack("<%dL" % self.numPointers, data)
+        pointers = list(struct.unpack("<%dL" % self.numPointers, data))
 
         self.basePointer = pointers[0]
 
+        # Discard invalid pointers
+        for i in range(self.numPointers):
+            if (pointers[i] < self.basePointer) or (pointers[i] - self.basePointer > 0xffffff):
+                pointers[i] = 0
+
         # Compute the section sizes from the pointers and read the section data
-        for i in range(len(pointers) - 1):
+        for i in range(self.numPointers - 1):
             if pointers[i]:
                 if pointers[i + 1]:
                     self.sections.append(fileobj.read(pointers[i + 1] - pointers[i]))
