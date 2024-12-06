@@ -386,13 +386,14 @@ def extractTextures(image, transPath):
     file = io.BytesIO(data)
     archive = wa.archive.Archive(file)
 
-    clutData = archive.getSection(48)
-    pixelData = expand4Bit(wa.lzss.decompress(archive.getSection(49)))
+    for section, clutOffset, transFileName in [(48, 0x120, "battle_icons.png"), (56, 0x60, "battle_icons2.png")]:
+        clutData = archive.getSection(section)
+        pixelData = expand4Bit(wa.lzss.decompress(archive.getSection(section + 1)))
 
-    img = Image.frombytes("P", (256, 256), pixelData, "raw", "P", 0, 1)
-    img.palette = ImagePalette.raw("BGR;15", convertABGR(clutData))
+        img = Image.frombytes("P", (256, 256), pixelData, "raw", "P", 0, 1)
+        img.palette = ImagePalette.raw("BGR;15", convertABGR(clutData[clutOffset:clutOffset + 32]))
 
-    img.save(os.path.join(outputDir, "battle_icons.png"), "PNG")
+        img.save(os.path.join(outputDir, transFileName), "PNG")
 
 
 # Print usage information and exit.

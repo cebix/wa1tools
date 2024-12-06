@@ -342,8 +342,10 @@ files:
       "EXP", "Gella" etc.), texts for battles ("LEVEL UP!"), and some icons.
 
     battle_icons.png
-      This texture has the "CONDITION GREEN!" and "CHARGE UP!" icons which
-      come up in battles.
+    battle_icons2.png
+      These textures have the "CONDITION GREEN!" and "CHARGE UP!" icons
+      which come up in battles, as well as the labels for Cecilia's spells
+      that raise character stats.
 
     load_save.png
     memory_card.png

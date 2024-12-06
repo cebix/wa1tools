@@ -672,9 +672,11 @@ def translateTextures(transPath, image):
     exeFile.close()
 
 
-    # Load battle icons image and compress
+    # Load battle icon images and compress
     pixelData = getPixels(transPath, transDir, "battle_icons.png", (256, 256), 16)
     battleIconData = wa.lzss.compress(pixelData)
+    pixelData = getPixels(transPath, transDir, "battle_icons2.png", (256, 256), 16)
+    battleIcon2Data = wa.lzss.compress(pixelData)
 
     # Process battle field data blocks
     flrFile = openForUpdate(image, "BIN", "CDFLR.BIN")
@@ -683,12 +685,14 @@ def translateTextures(transPath, image):
     for blockNum in range(67):
 
         # Read block
+        flrFile.seek(blockNum * blockSize)
         data = flrFile.read(blockSize)
         file = io.BytesIO(data)
         archive = wa.archive.Archive(file)
 
-        # Replace icon image
+        # Replace icon textures
         archive.setSection(49, battleIconData)
+        archive.setSection(57, battleIcon2Data)
 
         # Recreate archive
         file = io.BytesIO()
