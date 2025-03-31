@@ -1,4 +1,4 @@
-V1.1
+V1.1 (2025-03-31)
  - ported to Python 3
  - added support for the French and Italian releases of the game
  - added extraction/insertion of title screen images and battle icon
