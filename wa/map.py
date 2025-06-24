@@ -207,6 +207,7 @@ Op = _enum(
     MENU     =  0x16,  # display menu screen
     MAPFUNC  =  0x17,  # call map function
     EXEC     =  0x18,  # execute native code
+    TIMER    =  0x20,  # timer control
     SOUND    =  0x21,  # play sound
     MUSIC    =  0x22,  # play music
     ENDING   =  0x24,  # show ending movie
@@ -252,7 +253,7 @@ opcodes = [
     ( 4, "{0x1d}"),  # variable length
     ( 7, "{0x1e}"),
     ( 4, "{0x1f}"),  # variable length
-    (11, "{0x20}"),
+    (11, "timer"),
     ( 4, "sound"),
     ( 4, "music"),
     ( 3, "{0x23}"),  # variable length
@@ -531,6 +532,21 @@ def parseInstruction(data, offset, version, basePointer = mapBasePointer, kanjiB
             length += 10
 
         disass += " " + " ".join(map(hex, data[offset + 1:offset + length]))
+
+    elif op == Op.TIMER:
+
+        minStart = struct.unpack_from("<H", data, offset + 1)[0]
+        secStart = struct.unpack_from("<H", data, offset + 3)[0]
+        minStop = struct.unpack_from("<H", data, offset + 5)[0]
+        secStop = struct.unpack_from("<H", data, offset + 7)[0]
+
+        # Last operand is a script address
+        addr = struct.unpack_from("<H", data, offset + 9)[0]
+
+        disass += " %02d:%02d %02d:%02d call %04x" % (minStart, secStart, minStop, secStop, addr)
+
+        if addr != 0:
+            reloc.append(9)
 
     elif op == 0x23:
 
